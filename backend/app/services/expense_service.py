@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.couple import CoupleMember
 from app.models.expense import Expense, ExpenseSplit
 from app.models.user import User
-from app.schemas.expense import ExpenseCreate, ExpenseRead, SplitRead
+from app.schemas.expense import ExpenseCreate, ExpenseRead, PrivateExpenseCreate, SplitRead
 
 
 def _get_couple_members(db: Session, couple_id: int) -> list[User]:
@@ -85,6 +85,7 @@ def _build_expense_read(expense: Expense, db: Session) -> ExpenseRead:
         description=expense.description,
         total_amount=expense.total_amount,
         split_type=expense.split_type,
+        scope=expense.scope,
         created_at=expense.created_at,
         splits=[SplitRead.model_validate(s) for s in splits],
     )
@@ -161,6 +162,7 @@ def create_expense(db: Session, data: ExpenseCreate, current_user_id: int) -> Ex
     if current_user_id not in member_ids:
         raise HTTPException(status_code=403, detail="No perteneces a esta pareja")
 
+    effective_split_type = "on_me" if data.scope == "private" else data.split_type
     expense = Expense(
         couple_id=data.couple_id,
         paid_by=current_user_id,
@@ -168,15 +170,18 @@ def create_expense(db: Session, data: ExpenseCreate, current_user_id: int) -> Ex
         subcategory=data.subcategory,
         description=data.description,
         total_amount=data.total_amount,
-        split_type=data.split_type,
+        split_type=effective_split_type,
+        scope=data.scope,
     )
     db.add(expense)
     db.flush()
 
+    # For private expenses: only split against the current user
+    split_members = [m for m in members if m.id == current_user_id] if data.scope == "private" else members
     split_rows = _calculate_splits(
-        data.split_type,
+        effective_split_type,
         data.total_amount,
-        members,
+        split_members,
         current_user_id,
         data.custom_splits,
     )
@@ -193,15 +198,69 @@ def get_expenses(db: Session, couple_id: int, current_user_id: int, skip: int = 
     if current_user_id not in {m.id for m in members}:
         raise HTTPException(status_code=403, detail="No perteneces a esta pareja")
 
+    # Private expenses from couple context: only current user's own private expenses
+    # Shared expenses: visible to all couple members
     expenses = (
         db.query(Expense)
-        .filter(Expense.couple_id == couple_id)
+        .filter(
+            Expense.couple_id == couple_id,
+            Expense.scope == "shared",
+        )
         .order_by(Expense.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()
     )
     return [_build_expense_read(e, db) for e in expenses]
+
+
+def get_private_expenses(
+    db: Session, current_user_id: int, skip: int = 0, limit: int = 50
+) -> list[ExpenseRead]:
+    expenses = (
+        db.query(Expense)
+        .filter(
+            Expense.paid_by == current_user_id,
+            Expense.scope == "private",
+        )
+        .order_by(Expense.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return [_build_expense_read(e, db) for e in expenses]
+
+
+def create_private_expense(
+    db: Session, data: PrivateExpenseCreate, current_user_id: int
+) -> ExpenseRead:
+    # Private expenses need a couple_id — get from CoupleMember
+    member = db.query(CoupleMember).filter(CoupleMember.user_id == current_user_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="No perteneces a ninguna pareja")
+
+    expense = Expense(
+        couple_id=member.couple_id,
+        paid_by=current_user_id,
+        category=data.category,
+        subcategory=data.subcategory,
+        description=data.description,
+        total_amount=data.total_amount,
+        split_type="on_me",
+        scope="private",
+    )
+    db.add(expense)
+    db.flush()
+
+    db.add(ExpenseSplit(
+        expense_id=expense.id,
+        user_id=current_user_id,
+        percentage=Decimal("100"),
+        amount=data.total_amount,
+    ))
+    db.commit()
+    db.refresh(expense)
+    return _build_expense_read(expense, db)
 
 
 def get_expense(db: Session, expense_id: int, current_user_id: int) -> ExpenseRead:

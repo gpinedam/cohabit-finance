@@ -16,6 +16,7 @@ class Expense(Base):
     description = Column(Text, nullable=True)
     total_amount = Column(Numeric(10, 2), nullable=False)
     split_type = Column(String(20), nullable=False)  # equal|proportional|on_me|custom
+    scope = Column(String(10), nullable=False, default="shared")  # "shared" | "private"
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 

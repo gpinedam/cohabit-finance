@@ -8,6 +8,8 @@ class UserRead(BaseModel):
     id: int
     name: str
     income: Decimal
+    savings_goal_pct: int | None = None
+    emergency_fund_pct: int | None = None
     avatar: str | None = None
     created_at: datetime
 
@@ -17,6 +19,8 @@ class UserRead(BaseModel):
 class UserUpdate(BaseModel):
     name: str | None = None
     income: Decimal | None = None
+    savings_goal_pct: int | None = None
+    emergency_fund_pct: int | None = None
 
 
 class PinUpdate(BaseModel):

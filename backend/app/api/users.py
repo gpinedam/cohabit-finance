@@ -35,6 +35,10 @@ def update_me(
         current_user.name = body.name
     if body.income is not None:
         current_user.income = body.income
+    if body.savings_goal_pct is not None:
+        current_user.savings_goal_pct = body.savings_goal_pct
+    if body.emergency_fund_pct is not None:
+        current_user.emergency_fund_pct = body.emergency_fund_pct
     db.commit()
     db.refresh(current_user)
     return current_user

@@ -34,6 +34,7 @@ export default function ExpenseForm({ members = [], onSubmit, loading }) {
   const [splitType, setSplitType]   = useState('proportional')
   const [customPcts, setCustomPcts] = useState({})
   const [showSplitInfo, setShowSplitInfo] = useState(false)
+  const [scope, setScope]           = useState('shared')
 
   useEffect(() => {
     const t = setTimeout(() => amountRef.current?.focus(), 120)
@@ -47,9 +48,10 @@ export default function ExpenseForm({ members = [], onSubmit, loading }) {
       subcategory: subcategory || null,
       description: description || null,
       total_amount: parseFloat(amount),
-      split_type: splitType,
+      split_type: scope === 'private' ? 'on_me' : splitType,
+      scope,
     }
-    if (splitType === 'custom') {
+    if (scope === 'shared' && splitType === 'custom') {
       payload.custom_splits = members.map((m) => ({
         user_id: m.id,
         percentage: parseFloat(customPcts[m.id] || 0),
@@ -58,12 +60,13 @@ export default function ExpenseForm({ members = [], onSubmit, loading }) {
     onSubmit(payload)
     setAmount(''); setCategory(''); setSubcat(''); setDesc('')
     setSplitType('proportional'); setCustomPcts({}); setShowSplitInfo(false)
+    setScope('shared')
     setTimeout(() => amountRef.current?.focus(), 80)
   }
 
   const customTotal = Object.values(customPcts).reduce((s, v) => s + (parseFloat(v) || 0), 0)
   const canSubmit   = amount && parseFloat(amount) > 0 && category &&
-    (splitType !== 'custom' || Math.abs(customTotal - 100) < 0.1)
+    (scope === 'private' || splitType !== 'custom' || Math.abs(customTotal - 100) < 0.1)
 
   const activeSub   = CATEGORIES.find(c => c.name === category)?.subcategories ?? []
   const activeSplit = SPLIT_TYPES.find(t => t.value === splitType)
@@ -100,6 +103,32 @@ export default function ExpenseForm({ members = [], onSubmit, loading }) {
 
       {/* ── Divider ── */}
       <div className="h-px bg-slate-100" />
+
+      {/* ── Scope toggle ─────────────────────────────────────────── */}
+      <div className="px-4 py-3 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setScope('shared')}
+          className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold border transition-all active:scale-[0.97] ${
+            scope === 'shared'
+              ? 'bg-brand-600 text-white border-brand-600'
+              : 'bg-slate-50 text-slate-500 border-transparent hover:border-slate-200'
+          }`}
+        >
+          👫 Compartido
+        </button>
+        <button
+          type="button"
+          onClick={() => setScope('private')}
+          className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold border transition-all active:scale-[0.97] ${
+            scope === 'private'
+              ? 'bg-violet-600 text-white border-violet-600'
+              : 'bg-slate-50 text-slate-500 border-transparent hover:border-slate-200'
+          }`}
+        >
+          🔒 Personal
+        </button>
+      </div>
 
       {/* ── Category horizontal scroll ───────────────────────────── */}
       <div className="py-5">
@@ -153,51 +182,55 @@ export default function ExpenseForm({ members = [], onSubmit, loading }) {
       )}
 
       {/* ── Split type ───────────────────────────────────────────── */}
-      <div className="h-px bg-slate-100" />
-      <div className="px-4 py-4">
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">División</p>
-          <button
-            type="button"
-            onClick={() => setShowSplitInfo(v => !v)}
-            className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
-              showSplitInfo ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
-            }`}
-          >
-            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-            </svg>
-          </button>
-        </div>
+      {scope === 'shared' && (
+        <>
+          <div className="h-px bg-slate-100" />
+          <div className="px-4 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">División</p>
+              <button
+                type="button"
+                onClick={() => setShowSplitInfo(v => !v)}
+                className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${
+                  showSplitInfo ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                }`}
+              >
+                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                </svg>
+              </button>
+            </div>
 
-        <div className="flex gap-1.5">
-          {SPLIT_TYPES.map((t) => (
-            <button
-              type="button"
-              key={t.value}
-              onClick={() => setSplitType(t.value)}
-              className={`flex-1 py-2 rounded-xl text-[11px] font-semibold border transition-all active:scale-[0.97] leading-tight ${
-                splitType === t.value
-                  ? 'bg-brand-600 text-white border-brand-600'
-                  : 'bg-slate-50 text-slate-500 border-transparent hover:border-slate-200'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+            <div className="flex gap-1.5">
+              {SPLIT_TYPES.map((t) => (
+                <button
+                  type="button"
+                  key={t.value}
+                  onClick={() => setSplitType(t.value)}
+                  className={`flex-1 py-2 rounded-xl text-[11px] font-semibold border transition-all active:scale-[0.97] leading-tight ${
+                    splitType === t.value
+                      ? 'bg-brand-600 text-white border-brand-600'
+                      : 'bg-slate-50 text-slate-500 border-transparent hover:border-slate-200'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-        {/* Info card — shows description of selected split type */}
-        {showSplitInfo && activeSplit && (
-          <div className="mt-3 px-3.5 py-2.5 bg-brand-50 border border-brand-100 rounded-xl">
-            <p className="text-[11px] font-bold text-brand-700 mb-0.5">{activeSplit.label}</p>
-            <p className="text-[11px] text-brand-600 leading-snug">{activeSplit.desc}</p>
+            {/* Info card — shows description of selected split type */}
+            {showSplitInfo && activeSplit && (
+              <div className="mt-3 px-3.5 py-2.5 bg-brand-50 border border-brand-100 rounded-xl">
+                <p className="text-[11px] font-bold text-brand-700 mb-0.5">{activeSplit.label}</p>
+                <p className="text-[11px] text-brand-600 leading-snug">{activeSplit.desc}</p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* ── Custom split ─────────────────────────────────────────── */}
-      {splitType === 'custom' && members.length > 0 && (
+      {scope === 'shared' && splitType === 'custom' && members.length > 0 && (
         <>
           <div className="h-px bg-slate-100" />
           <div className="px-4 py-4">

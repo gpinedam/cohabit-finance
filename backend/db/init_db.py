@@ -10,6 +10,7 @@ from sqlalchemy import inspect, text
 from app.core.security import get_password_hash, get_pin_hash
 from app.models.couple import Couple, CoupleMember  # noqa: F401 – register with Base
 from app.models.expense import Expense, ExpenseSplit, Payment  # noqa: F401
+from app.models.recurring import RecurringEntry, RecurringService  # noqa: F401
 from app.models.settlement import Settlement  # noqa: F401
 from app.models.user import User  # noqa: F401
 from db.session import Base, SessionLocal, engine
@@ -38,7 +39,19 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN avatar VARCHAR(255)"))
             conn.commit()
             logger.info("Migration: added users.avatar")
-        # settlements table is created by Base.metadata.create_all via the model import
+        if not _column_exists("expenses", "scope"):
+            conn.execute(text("ALTER TABLE expenses ADD COLUMN scope VARCHAR(10) NOT NULL DEFAULT 'shared'"))
+            conn.commit()
+            logger.info("Migration: added expenses.scope")
+        if not _column_exists("users", "savings_goal_pct"):
+            conn.execute(text("ALTER TABLE users ADD COLUMN savings_goal_pct INTEGER"))
+            conn.commit()
+            logger.info("Migration: added users.savings_goal_pct")
+        if not _column_exists("users", "emergency_fund_pct"):
+            conn.execute(text("ALTER TABLE users ADD COLUMN emergency_fund_pct INTEGER"))
+            conn.commit()
+            logger.info("Migration: added users.emergency_fund_pct")
+        # settlements and recurring tables are created by Base.metadata.create_all via the model imports
 
 
 def init_db() -> None:

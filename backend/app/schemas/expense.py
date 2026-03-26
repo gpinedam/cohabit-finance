@@ -18,6 +18,7 @@ class ExpenseCreate(BaseModel):
     total_amount: Decimal
     split_type: Literal["equal", "proportional", "on_me", "custom"]
     custom_splits: list[CustomSplitInput] | None = None
+    scope: Literal["shared", "private"] = "shared"
 
     @field_validator("total_amount")
     @classmethod
@@ -35,6 +36,20 @@ class ExpenseCreate(BaseModel):
             if abs(total_pct - Decimal("100")) > Decimal("0.01"):
                 raise ValueError("Los porcentajes del split personalizado deben sumar 100")
         return self
+
+
+class PrivateExpenseCreate(BaseModel):
+    category: str
+    subcategory: str | None = None
+    description: str | None = None
+    total_amount: Decimal
+
+    @field_validator("total_amount")
+    @classmethod
+    def amount_must_be_positive(cls, v: Decimal) -> Decimal:
+        if v <= 0:
+            raise ValueError("El monto debe ser mayor que 0")
+        return v
 
 
 class ExpenseUpdate(BaseModel):
@@ -69,6 +84,7 @@ class ExpenseRead(BaseModel):
     description: str | None
     total_amount: Decimal
     split_type: str
+    scope: str
     created_at: datetime
     splits: list[SplitRead] = []
 

@@ -39,9 +39,9 @@ def get_balance(db: Session, couple_id: int, current_user_id: int) -> dict:
     member_ids   = [m.id for m in members]
     member_names = {m.id: m.name for m in members}
 
-    # Only consider expenses after the last settlement
+    # Only consider shared expenses after the last settlement
     since = _last_settlement_dt(db, couple_id)
-    q = db.query(Expense).filter(Expense.couple_id == couple_id)
+    q = db.query(Expense).filter(Expense.couple_id == couple_id, Expense.scope == "shared")
     if since:
         q = q.filter(Expense.created_at > since)
     expenses = q.all()

@@ -5,8 +5,10 @@ import Dashboard from './pages/Dashboard'
 import Expenses from './pages/Expenses'
 import History from './pages/History'
 import Home from './pages/Home'
+import Personal from './pages/Personal'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
+import Recurring from './pages/Recurring'
 import SetupPin from './pages/SetupPin'
 import Splits from './pages/Splits'
 
@@ -92,6 +94,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppShell><Profile /></AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/recurring"
+        element={
+          <ProtectedRoute>
+            <AppShell><Recurring /></AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/personal"
+        element={
+          <ProtectedRoute>
+            <AppShell><Personal /></AppShell>
           </ProtectedRoute>
         }
       />

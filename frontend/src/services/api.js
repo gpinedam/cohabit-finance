@@ -72,6 +72,8 @@ export const getMonthly = (coupleId, year, month) =>
   api.get('/reports/monthly', { params: { couple_id: coupleId, year, month } })
 export const getHistory = (coupleId) =>
   api.get('/reports/history', { params: { couple_id: coupleId } })
+export const getPersonalSummary = (coupleId, year, month) =>
+  api.get('/reports/personal-summary', { params: { couple_id: coupleId, year, month } })
 export const exportHistory = (coupleId, year = null, month = null) => {
   const params = { couple_id: coupleId }
   if (year) params.year = year
@@ -84,5 +86,27 @@ export const createSettlement = (coupleId, note = null) =>
   api.post('/settlements/', { couple_id: coupleId, note })
 export const listSettlements = (coupleId) =>
   api.get('/settlements/', { params: { couple_id: coupleId } })
+
+// --- Recurring services ---
+export const listRecurringServices = (coupleId) =>
+  api.get('/recurring/services', { params: { couple_id: coupleId } })
+export const createRecurringService = (data) =>
+  api.post('/recurring/services', data)
+export const updateRecurringService = (id, data) =>
+  api.put(`/recurring/services/${id}`, data)
+export const deleteRecurringService = (id) =>
+  api.delete(`/recurring/services/${id}`)
+export const listRecurringEntries = (coupleId, year, month) =>
+  api.get('/recurring/entries', { params: { couple_id: coupleId, year, month } })
+export const payRecurringEntry = (id, data) =>
+  api.post(`/recurring/entries/${id}/pay`, data)
+export const skipRecurringEntry = (id) =>
+  api.post(`/recurring/entries/${id}/skip`)
+
+// --- Private expenses ---
+export const listPrivateExpenses = (skip = 0, limit = 50) =>
+  api.get('/expenses/private', { params: { skip, limit } })
+export const createPrivateExpense = (data) =>
+  api.post('/expenses/private', data)
 
 export default api
