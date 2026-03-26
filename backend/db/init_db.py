@@ -10,6 +10,7 @@ from sqlalchemy import inspect, text
 from app.core.security import get_password_hash, get_pin_hash
 from app.models.couple import Couple, CoupleMember  # noqa: F401 – register with Base
 from app.models.expense import Expense, ExpenseSplit, Payment  # noqa: F401
+from app.models.settlement import Settlement  # noqa: F401
 from app.models.user import User  # noqa: F401
 from db.session import Base, SessionLocal, engine
 
@@ -37,6 +38,7 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN avatar VARCHAR(255)"))
             conn.commit()
             logger.info("Migration: added users.avatar")
+        # settlements table is created by Base.metadata.create_all via the model import
 
 
 def init_db() -> None:

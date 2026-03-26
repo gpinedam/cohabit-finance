@@ -11,14 +11,12 @@ const CATEGORY_EMOJI = {
 
 export default function Home() {
   const { user, coupleId, setCoupleId } = useAuth()
-  const [members, setMembers]   = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [toast, setToast]       = useState('')
-  const [recent, setRecent]     = useState([])
+  const [members, setMembers]           = useState([])
+  const [loading, setLoading]           = useState(false)
+  const [toast, setToast]               = useState('')
+  const [recent, setRecent]             = useState([])
+  const [monthTotal, setMonthTotal]     = useState(null)
   const [resolvedCouple, setResolvedCouple] = useState(coupleId)
-
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
 
   useEffect(() => {
     const stored = localStorage.getItem('coupleId')
@@ -39,6 +37,10 @@ export default function Home() {
     api.get('/expenses/', { params: { couple_id: resolvedCouple, limit: 3 } })
       .then((r) => setRecent(r.data))
       .catch(() => {})
+    const now = new Date()
+    api.get('/reports/monthly', { params: { couple_id: resolvedCouple, year: now.getFullYear(), month: now.getMonth() + 1 } })
+      .then((r) => setMonthTotal(r.data.total))
+      .catch(() => {})
   }, [resolvedCouple])
 
   const handleSubmit = async (payload) => {
@@ -46,66 +48,79 @@ export default function Home() {
     setLoading(true)
     try {
       await createExpense({ ...payload, couple_id: resolvedCouple })
-      setToast('success')
-      setTimeout(() => setToast(''), 2500)
-      const r = await listExpenses(resolvedCouple, 0, 3)
-      setRecent(r.data)
+      setToast('ok')
+      setTimeout(() => setToast(''), 2200)
+      const [expenses, monthly] = await Promise.all([
+        listExpenses(resolvedCouple, 0, 3),
+        api.get('/reports/monthly', {
+          params: { couple_id: resolvedCouple, year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+        }),
+      ])
+      setRecent(expenses.data)
+      setMonthTotal(monthly.data.total)
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Error al registrar'
-      setToast('error:' + msg)
+      setToast('err:' + (err.response?.data?.detail || 'Error al registrar'))
       setTimeout(() => setToast(''), 3000)
     } finally {
       setLoading(false)
     }
   }
 
-  const isError = toast.startsWith('error:')
-  const toastMsg = isError ? toast.replace('error:', '') : 'Gasto registrado correctamente'
+  const isErr   = toast.startsWith('err:')
+  const toastMsg = isErr ? toast.replace('err:', '') : '¡Gasto registrado!'
 
   return (
-    <div className="pt-16 pb-24 max-w-lg mx-auto">
+    <div className="pt-16 pb-28 max-w-lg mx-auto">
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-[72px] left-4 right-4 z-50 max-w-lg mx-auto text-[13px] font-medium px-4 py-3 rounded-xl shadow-lg text-center animate-slide-up ${
-          isError ? 'bg-red-600 text-white' : 'bg-slate-900 text-white'
+        <div className={`fixed top-[72px] left-4 right-4 z-50 max-w-lg mx-auto text-sm font-medium px-4 py-3 rounded-2xl shadow-xl text-center transition-all ${
+          isErr ? 'bg-rose-500 text-white' : 'bg-slate-900 text-white'
         }`}>
           {toastMsg}
         </div>
       )}
 
-      {/* Header */}
-      <div className="px-5 pt-6 pb-4">
-        <p className="text-slate-500 text-sm">{greeting}</p>
-        <h1 className="text-2xl font-bold text-slate-900 mt-0.5">
-          {user?.name?.split(' ')[0] ?? 'Usuario'}
-        </h1>
+      {/* ── Greeting strip ── */}
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-slate-400 font-medium">{
+            new Date().getHours() < 12 ? 'Buenos días' : new Date().getHours() < 18 ? 'Buenas tardes' : 'Buenas noches'
+          }</p>
+          <h1 className="text-xl font-bold text-slate-900 leading-tight mt-0.5">
+            {user?.name?.split(' ')[0] ?? 'Usuario'}
+          </h1>
+        </div>
+        {monthTotal !== null && (
+          <div className="text-right">
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Este mes</p>
+            <p className="text-base font-bold text-slate-800 tabular-nums mt-0.5">S/ {Number(monthTotal).toFixed(2)}</p>
+          </div>
+        )}
       </div>
 
-      {/* Form */}
-      <div className="px-4">
+      {/* ── Form card ── */}
+      <div className="mx-4 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <ExpenseForm members={members} onSubmit={handleSubmit} loading={loading} />
       </div>
 
-      {/* Recent expenses */}
+      {/* ── Recent expenses ── */}
       {recent.length > 0 && (
-        <div className="px-4 mt-7">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Últimos gastos</p>
-          <div className="flex flex-col gap-2">
+        <div className="px-4 mt-6">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">Últimos gastos</p>
+          <div className="flex flex-col gap-1.5">
             {recent.map((e) => (
-              <div key={e.id} className="bg-white rounded-xl px-4 py-3 border border-slate-200 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-base shrink-0">
+              <div key={e.id} className="bg-white rounded-2xl px-4 py-3 border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-lg shrink-0">
                   {CATEGORY_EMOJI[e.category] || '📦'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-800 text-sm leading-tight">{e.category}</p>
+                  <p className="font-semibold text-slate-800 text-sm leading-tight">{e.category}</p>
                   {(e.subcategory || e.description) && (
-                    <p className="text-xs text-slate-400 mt-0.5 truncate">
-                      {e.subcategory || e.description}
-                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5 truncate">{e.subcategory || e.description}</p>
                   )}
                 </div>
-                <span className="font-semibold text-slate-900 text-sm shrink-0 tabular-nums">
+                <span className="font-bold text-slate-900 text-sm shrink-0 tabular-nums">
                   S/ {Number(e.total_amount).toFixed(2)}
                 </span>
               </div>

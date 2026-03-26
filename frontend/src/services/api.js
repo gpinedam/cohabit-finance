@@ -79,4 +79,10 @@ export const exportHistory = (coupleId, year = null, month = null) => {
   return api.get('/reports/export', { params, responseType: 'blob' })
 }
 
+// --- Settlements ---
+export const createSettlement = (coupleId, note = null) =>
+  api.post('/settlements/', { couple_id: coupleId, note })
+export const listSettlements = (coupleId) =>
+  api.get('/settlements/', { params: { couple_id: coupleId } })
+
 export default api

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import auth, expenses, reports, users
+from app.api import auth, expenses, reports, settlements, users
 from db.init_db import init_db
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +38,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(expenses.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
+app.include_router(settlements.router, prefix="/api")
 
 
 # Serve user avatars

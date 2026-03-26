@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Supermercado",
+    "short": "Súper",
+    "emoji": "🛍️",
+    "subcategories": ["Semanal", "Mensual", "Limpieza"]
+  },
+  {
+    "name": "Alquiler",
+    "short": "Alquiler",
+    "emoji": "🏠",
+    "subcategories": ["Mensual", "Cuota extra"]
+  },
+  {
+    "name": "Servicios",
+    "short": "Servicios",
+    "emoji": "⚡",
+    "subcategories": ["Luz", "Agua", "Internet", "Gas"]
+  },
+  {
+    "name": "Ocio",
+    "short": "Ocio",
+    "emoji": "🎬",
+    "subcategories": ["Cinema", "Concierto", "Viaje"]
+  },
+  {
+    "name": "Restaurante",
+    "short": "Restaurante",
+    "emoji": "🍴",
+    "subcategories": ["Cena", "Almuerzo", "Delivery"]
+  },
+  {
+    "name": "Transporte",
+    "short": "Transporte",
+    "emoji": "🚗",
+    "subcategories": ["Gasolina", "Uber", "Bus", "Taxi"]
+  },
+  {
+    "name": "Salud",
+    "short": "Salud",
+    "emoji": "🩺",
+    "subcategories": ["Farmacia", "Médico", "Gimnasio"]
+  },
+  {
+    "name": "Otros",
+    "short": "Otros",
+    "emoji": "📦",
+    "subcategories": ["Varios"]
+  }
+]

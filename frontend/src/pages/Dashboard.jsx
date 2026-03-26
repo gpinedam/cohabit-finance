@@ -1,20 +1,55 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getBalance } from '../services/api'
+import { createSettlement, getBalance, listSettlements } from '../services/api'
+
+const MONTH_NAMES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
+function fmt(n) { return `S/ ${Number(n).toFixed(2)}` }
+function fmtDate(iso) {
+  const d = new Date(iso)
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
+}
 
 export default function Dashboard() {
   const { coupleId } = useAuth()
-  const [data, setData]    = useState(null)
-  const [loading, setLoad] = useState(true)
-  const [error, setError]  = useState('')
+  const [data,        setData]        = useState(null)
+  const [settlements, setSettlements] = useState([])
+  const [loading,     setLoad]        = useState(true)
+  const [error,       setError]       = useState('')
+  const [confirming,  setConfirming]  = useState(false)
+  const [settling,    setSettling]    = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
-  useEffect(() => {
+  const load = async () => {
     if (!coupleId) return
-    getBalance(coupleId)
-      .then((r) => setData(r.data))
-      .catch(() => setError('No se pudo cargar el balance'))
-      .finally(() => setLoad(false))
-  }, [coupleId])
+    try {
+      const [b, s] = await Promise.all([
+        getBalance(coupleId),
+        listSettlements(coupleId),
+      ])
+      setData(b.data)
+      setSettlements(s.data)
+    } catch {
+      setError('No se pudo cargar el balance')
+    } finally {
+      setLoad(false)
+    }
+  }
+
+  useEffect(() => { load() }, [coupleId])
+
+  const handleSettle = async () => {
+    setSettling(true)
+    try {
+      await createSettlement(coupleId)
+      setConfirming(false)
+      await load()
+    } catch {
+      setError('No se pudo registrar la liquidación')
+    } finally {
+      setSettling(false)
+    }
+  }
 
   if (loading) return (
     <div className="pt-20 flex items-center justify-center">
@@ -28,34 +63,71 @@ export default function Dashboard() {
   )
   if (!data) return null
 
-  const { debts, summary } = data
-  const memberIds = Object.keys(summary.member_names).map(Number)
-  const total = Number(summary.total_expenses)
+  const { debts, since, summary } = data
+  const memberIds  = Object.keys(summary.member_names).map(Number)
+  const total      = Number(summary.total_expenses)
+  const hasDebts   = debts.length > 0
+  const totalDebt  = debts.reduce((s, d) => s + Number(d.amount), 0)
 
   return (
     <div className="pt-16 pb-24 max-w-lg mx-auto">
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-bold text-slate-900">Balance</h1>
+
+      {/* ── Header ── */}
+      <div className="px-5 pt-6 pb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Balance</h1>
+          {since && (
+            <p className="text-xs text-slate-400 mt-0.5">
+              Desde liquidación · {fmtDate(since)}
+            </p>
+          )}
+        </div>
+        {settlements.length > 0 && (
+          <button
+            onClick={() => setShowHistory(v => !v)}
+            className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+          >
+            Historial
+          </button>
+        )}
       </div>
 
-      {/* ── Total card (dark) ──────────────────────────────────────── */}
+      {/* ── Settlement history (collapsible) ── */}
+      {showHistory && settlements.length > 0 && (
+        <div className="mx-4 mb-4 bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Liquidaciones anteriores</p>
+          </div>
+          {settlements.map((s) => (
+            <div key={s.id} className="flex items-center justify-between px-4 py-3 border-b border-slate-50 last:border-0">
+              <div>
+                <p className="text-sm font-medium text-slate-700">{fmtDate(s.settled_at)}</p>
+                {s.note && <p className="text-xs text-slate-400 mt-0.5">{s.note}</p>}
+              </div>
+              <span className="text-sm font-bold text-emerald-600 tabular-nums">{fmt(s.amount)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Total card ── */}
       <div className="mx-4 bg-slate-900 rounded-2xl p-5 mb-4">
         <p className="text-slate-500 text-[11px] font-semibold uppercase tracking-widest mb-2">Total gastado</p>
-        <p className="text-4xl font-bold text-white tabular-nums">
-          S/ {total.toFixed(2)}
+        <p className="text-4xl font-bold text-white tabular-nums">{fmt(total)}</p>
+        <p className="text-slate-600 text-xs mt-1.5">
+          {memberIds.length} personas · {since ? `desde ${fmtDate(since)}` : 'desde el inicio'}
         </p>
-        <p className="text-slate-600 text-xs mt-1.5">{memberIds.length} personas · período actual</p>
       </div>
 
-      {/* ── Per-person ────────────────────────────────────────────── */}
+      {/* ── Per-person cards ── */}
       <div className="mx-4 grid grid-cols-2 gap-3 mb-4">
         {memberIds.map((uid) => {
-          const net     = Number(summary.net_by_user[uid] ?? 0)
-          const paid    = Number(summary.paid_by_user[uid] ?? 0)
-          const owed    = Number(summary.owe_by_user[uid] ?? 0)
+          const net      = Number(summary.net_by_user[uid] ?? 0)
+          const paid     = Number(summary.paid_by_user[uid] ?? 0)
+          const owed     = Number(summary.owe_by_user[uid] ?? 0)
           const positive = net >= 0
           return (
-            <div key={uid} className="bg-white rounded-xl p-4 border border-slate-200">
+            <div key={uid} className="bg-white rounded-xl p-4 border border-slate-100">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xs shrink-0">
                   {summary.member_names[uid].charAt(0).toUpperCase()}
@@ -67,16 +139,16 @@ export default function Dashboard() {
               <div className="space-y-2.5">
                 <div>
                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Pagó</p>
-                  <p className="font-semibold text-slate-900 text-sm tabular-nums">S/ {paid.toFixed(2)}</p>
+                  <p className="font-semibold text-slate-900 text-sm tabular-nums">{fmt(paid)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Le corresponde</p>
-                  <p className="font-semibold text-slate-900 text-sm tabular-nums">S/ {owed.toFixed(2)}</p>
+                  <p className="font-semibold text-slate-900 text-sm tabular-nums">{fmt(owed)}</p>
                 </div>
-                <div className={`rounded-lg px-2.5 py-2 ${positive ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                <div className={`rounded-lg px-2.5 py-2 ${positive ? 'bg-emerald-50' : 'bg-rose-50'}`}>
                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Neto</p>
-                  <p className={`font-bold text-sm tabular-nums ${positive ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {positive ? '+' : ''}S/ {net.toFixed(2)}
+                  <p className={`font-bold text-sm tabular-nums ${positive ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {positive ? '+' : ''}{fmt(net)}
                   </p>
                 </div>
               </div>
@@ -85,14 +157,14 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* ── Debts ─────────────────────────────────────────────────── */}
-      {debts.length > 0 ? (
-        <div className="mx-4 bg-white rounded-xl border border-slate-200 overflow-hidden">
+      {/* ── Debts / settled ── */}
+      {hasDebts ? (
+        <div className="mx-4 bg-white rounded-2xl border border-slate-100 overflow-hidden mb-4">
           <div className="px-4 py-3 border-b border-slate-100">
-            <h3 className="font-semibold text-slate-800 text-sm">Liquidaciones pendientes</h3>
+            <h3 className="font-semibold text-slate-800 text-sm">Pendiente</h3>
           </div>
           {debts.map((d, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 last:border-0">
+            <div key={i} className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-50 last:border-0">
               <div className="flex items-center gap-1.5 flex-1 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs shrink-0">
                   {d.from_user_name.charAt(0).toUpperCase()}
@@ -102,12 +174,12 @@ export default function Dashboard() {
                   <p className="text-xs text-slate-400">debe a <span className="font-medium text-slate-600">{d.to_user_name}</span></p>
                 </div>
               </div>
-              <span className="font-bold text-red-500 text-sm shrink-0 tabular-nums">S/ {Number(d.amount).toFixed(2)}</span>
+              <span className="font-bold text-rose-500 text-sm shrink-0 tabular-nums">{fmt(d.amount)}</span>
             </div>
           ))}
         </div>
       ) : (
-        <div className="mx-4 bg-white border border-slate-200 rounded-xl p-6 text-center">
+        <div className="mx-4 bg-white border border-slate-100 rounded-2xl p-6 text-center mb-4">
           <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
             <svg className="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
               <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
@@ -115,6 +187,62 @@ export default function Dashboard() {
           </div>
           <p className="font-semibold text-slate-800 text-sm">Todo al día</p>
           <p className="text-slate-400 text-xs mt-1">No hay deudas pendientes</p>
+        </div>
+      )}
+
+      {/* ── Settle button ── */}
+      {hasDebts && !confirming && (
+        <div className="mx-4">
+          <button
+            onClick={() => setConfirming(true)}
+            className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-white font-semibold text-[15px] flex items-center justify-center gap-2 shadow-sm shadow-emerald-500/20 transition-all"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            Liquidar deuda · {fmt(totalDebt)}
+          </button>
+        </div>
+      )}
+
+      {/* ── Confirm modal ── */}
+      {confirming && (
+        <div className="fixed inset-0 z-50 flex items-end" onClick={() => setConfirming(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white rounded-t-3xl px-5 pt-5 pb-12 w-full max-w-lg mx-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mx-auto w-10 h-1 rounded-full bg-slate-200 mb-5" />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-slate-900 text-lg text-center mb-1">¿Liquidar deuda?</h3>
+            <p className="text-slate-500 text-sm text-center mb-1">
+              Se registra que la deuda de <span className="font-semibold text-slate-700">{fmt(totalDebt)}</span> fue saldada.
+            </p>
+            <p className="text-slate-400 text-xs text-center mb-6">
+              El balance empezará desde cero. Los gastos anteriores quedan en el historial.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirming(false)}
+                className="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSettle}
+                disabled={settling}
+                className="flex-1 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+              >
+                {settling && <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
