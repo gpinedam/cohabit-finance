@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.security import get_pin_hash, verify_pin
@@ -6,6 +8,10 @@ from app.dependencies.auth import get_current_user, get_db
 from app.models.couple import CoupleMember
 from app.models.user import User
 from app.schemas.user import PinStatus, PinUpdate, UserRead, UserUpdate
+
+AVATARS_DIR = Path("data/avatars")
+ALLOWED_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -73,3 +79,45 @@ def delete_pin(
     current_user.pin_hash = None
     db.commit()
     return {"message": "PIN eliminado"}
+
+
+@router.post("/me/avatar", response_model=UserRead)
+async def upload_avatar(
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Solo se aceptan imágenes JPG, PNG o WebP")
+
+    contents = await file.read()
+    if len(contents) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="La imagen no puede superar los 5 MB")
+
+    AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+    ext = ALLOWED_TYPES[file.content_type]
+    filename = f"{current_user.id}.{ext}"
+
+    # Remove previous avatar files for this user (any extension)
+    for old in AVATARS_DIR.glob(f"{current_user.id}.*"):
+        old.unlink(missing_ok=True)
+
+    (AVATARS_DIR / filename).write_bytes(contents)
+    current_user.avatar = filename
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/me/avatar", response_model=UserRead)
+def delete_avatar(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.avatar:
+        for old in AVATARS_DIR.glob(f"{current_user.id}.*"):
+            old.unlink(missing_ok=True)
+    current_user.avatar = None
+    db.commit()
+    db.refresh(current_user)
+    return current_user

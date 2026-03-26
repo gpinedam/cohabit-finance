@@ -33,6 +33,10 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN income NUMERIC(10,2) DEFAULT 0"))
             conn.commit()
             logger.info("Migration: added users.income")
+        if not _column_exists("users", "avatar"):
+            conn.execute(text("ALTER TABLE users ADD COLUMN avatar VARCHAR(255)"))
+            conn.commit()
+            logger.info("Migration: added users.avatar")
 
 
 def init_db() -> None:

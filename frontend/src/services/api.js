@@ -47,6 +47,16 @@ export const getPinStatus = () => api.get('/users/me/pin-status')
 export const setPin = (pin) => api.put('/users/me/pin', { pin })
 export const deletePin = () => api.delete('/users/me/pin')
 
+export const uploadAvatar = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/users/me/avatar', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const deleteAvatar = () => api.delete('/users/me/avatar')
+
 // --- Expenses ---
 export const createExpense = (data) => api.post('/expenses/', data)
 export const listExpenses = (coupleId, skip = 0, limit = 50) =>

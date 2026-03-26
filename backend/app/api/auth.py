@@ -20,7 +20,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Credenciales incorrectas",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     return Token(access_token=token)
 
 
@@ -31,7 +31,7 @@ def pin_login(body: PinLoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PIN no configurado")
     if not verify_pin(body.pin, user.pin_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PIN incorrecto")
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     return Token(access_token=token)
 
 
@@ -43,12 +43,12 @@ def pin_login_by_id(body: PinLoginByIdRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PIN incorrecto")
     if not verify_pin(body.pin, user.pin_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PIN incorrecto")
-    token = create_access_token({"sub": user.email})
+    token = create_access_token({"sub": str(user.id)})
     return Token(access_token=token)
 
 
 @router.get("/users")
 def list_users(db: Session = Depends(get_db)):
-    """Public endpoint: returns all users (id + name) for the login screen."""
+    """Public endpoint: returns all users (id + name + avatar) for the login screen."""
     users = db.query(User).order_by(User.id).all()
-    return [{"id": u.id, "name": u.name} for u in users]
+    return [{"id": u.id, "name": u.name, "avatar": u.avatar} for u in users]

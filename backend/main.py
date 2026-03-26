@@ -12,8 +12,9 @@ from db.init_db import init_db
 
 logging.basicConfig(level=logging.INFO)
 
-# Ensure data/ directory exists (needed for SQLite on first run)
+# Ensure data/ and avatars/ dirs exist
 Path("data").mkdir(exist_ok=True)
+Path("data/avatars").mkdir(exist_ok=True)
 
 app = FastAPI(title="Cohabit Finance API", version="1.0.0")
 
@@ -38,6 +39,9 @@ app.include_router(users.router, prefix="/api")
 app.include_router(expenses.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 
+
+# Serve user avatars
+app.mount("/avatars", StaticFiles(directory="data/avatars"), name="avatars")
 
 # Serve React SPA in production
 DIST_DIR = Path(__file__).parent / "frontend" / "dist"

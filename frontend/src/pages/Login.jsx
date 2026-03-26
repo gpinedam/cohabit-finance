@@ -4,19 +4,55 @@ import PinPad from '../components/PinPad'
 import { useAuth } from '../context/AuthContext'
 import { getMe, getPinStatus, listUsers, loginWithPinById } from '../services/api'
 
-// Avatar colors by index
 const AVATAR_COLORS = ['bg-brand-600', 'bg-violet-500', 'bg-rose-500', 'bg-amber-500']
+
+// Usuario card avatar: foto si existe, inicial si no
+function CardAvatar({ user, index }) {
+  if (user.avatar) {
+    return (
+      <img
+        src={`/avatars/${user.avatar}`}
+        alt={user.name}
+        className="w-12 h-12 rounded-2xl object-cover bg-slate-200 shrink-0"
+      />
+    )
+  }
+  const color = AVATAR_COLORS[index % AVATAR_COLORS.length]
+  return (
+    <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-white text-xl font-bold shrink-0`}>
+      {user.name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
+// Avatar grande para la pantalla de PIN
+function PinAvatar({ user, index }) {
+  if (user.avatar) {
+    return (
+      <img
+        src={`/avatars/${user.avatar}`}
+        alt={user.name}
+        className="w-24 h-24 rounded-3xl object-cover bg-slate-700 shadow-xl mb-5"
+      />
+    )
+  }
+  const color = AVATAR_COLORS[index % AVATAR_COLORS.length]
+  return (
+    <div className={`w-24 h-24 rounded-3xl ${color} flex items-center justify-center text-white text-4xl font-bold mb-5 shadow-xl`}>
+      {user.name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
 
 export default function Login() {
   const { login } = useAuth()
   const navigate   = useNavigate()
 
   const [users, setUsers]       = useState([])
-  const [selected, setSelected] = useState(null)   // { id, name }
+  const [selected, setSelected] = useState(null)
   const [pinError, setPinError] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(true)
 
-  // Load user list on mount
   useEffect(() => {
     listUsers()
       .then((r) => setUsers(r.data))
@@ -29,7 +65,7 @@ export default function Login() {
     const userRes = await getMe()
     const user = userRes.data
     await getPinStatus()
-    localStorage.setItem('linkedEmail', user.email)
+    localStorage.setItem('linkedEmail', user.email ?? '')
     localStorage.setItem('pinEnabled', 'true')
     login(token, user, null)
     navigate('/')
@@ -44,12 +80,12 @@ export default function Login() {
     }
   }
 
+  const selectedIndex = selected ? users.findIndex((u) => u.id === selected.id) : 0
+
   /* ── User selection screen ──────────────────────────────────────── */
   if (!selected) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-
-        {/* Hero */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4">
           <div className="w-16 h-16 rounded-2xl bg-brand-600 flex items-center justify-center mb-6 shadow-xl shadow-brand-600/30">
             <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -60,8 +96,7 @@ export default function Login() {
           <p className="text-slate-400 text-sm mt-1.5">Gastos compartidos en pareja</p>
         </div>
 
-        {/* User cards bottom sheet */}
-        <div className="bg-white rounded-t-3xl px-6 pt-7 pb-14">
+        <div className="bg-white rounded-t-3xl px-6 pt-7 pb-16">
           <p className="text-sm font-semibold text-slate-500 mb-4">¿Quién eres?</p>
 
           {loadingUsers ? (
@@ -74,11 +109,9 @@ export default function Login() {
                 <button
                   key={u.id}
                   onClick={() => setSelected(u)}
-                  className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50/50 active:scale-[0.98] transition-all text-left"
+                  className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl border border-slate-200 hover:border-brand-300 hover:bg-brand-50/40 active:scale-[0.98] transition-all text-left"
                 >
-                  <div className={`w-12 h-12 rounded-2xl ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-white text-xl font-bold shrink-0`}>
-                    {u.name.charAt(0).toUpperCase()}
-                  </div>
+                  <CardAvatar user={u} index={i} />
                   <div className="flex-1">
                     <p className="font-semibold text-slate-900">{u.name}</p>
                     <p className="text-xs text-slate-400 mt-0.5">Toca para ingresar con PIN</p>
@@ -96,20 +129,14 @@ export default function Login() {
   }
 
   /* ── PIN entry screen ───────────────────────────────────────────── */
-  const colorIdx = users.findIndex((u) => u.id === selected.id) % AVATAR_COLORS.length
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
-
-      {/* Hero con usuario seleccionado */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4">
-        <div className={`w-20 h-20 rounded-3xl ${AVATAR_COLORS[colorIdx]} flex items-center justify-center text-white text-3xl font-bold mb-5 shadow-xl`}>
-          {selected.name.charAt(0).toUpperCase()}
-        </div>
+        <PinAvatar user={selected} index={selectedIndex} />
         <h2 className="text-2xl font-bold text-white">{selected.name}</h2>
         <p className="text-slate-400 text-sm mt-1.5">Ingresa tu PIN de 6 dígitos</p>
       </div>
 
-      {/* PIN pad */}
       <div className="bg-white rounded-t-3xl px-6 pt-8 pb-14">
         <PinPad
           onComplete={handlePinComplete}

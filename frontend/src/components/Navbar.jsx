@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-// ── SVG icon set (Heroicons style) ──────────────────────────────────────────
 function IcHome({ a }) {
   return a ? (
     <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="currentColor">
@@ -73,6 +72,27 @@ const TABS = [
   { path: '/profile',   label: 'Perfil',    Icon: IcUser },
 ]
 
+// Muestra avatar o inicial
+function UserAvatar({ user, size = 'sm' }) {
+  const cls = size === 'sm'
+    ? 'w-8 h-8 rounded-full text-[13px]'
+    : 'w-14 h-14 rounded-2xl text-xl'
+  if (user?.avatar) {
+    return (
+      <img
+        src={`/avatars/${user.avatar}`}
+        alt={user.name}
+        className={`${cls} object-cover bg-slate-200`}
+      />
+    )
+  }
+  return (
+    <div className={`${cls} bg-brand-600 flex items-center justify-center text-white font-bold`}>
+      {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+    </div>
+  )
+}
+
 export default function Navbar() {
   const { user, logout, lockScreen } = useAuth()
   const location = useLocation()
@@ -93,9 +113,9 @@ export default function Navbar() {
           </div>
           <button
             onClick={() => setDrawerOpen(true)}
-            className="w-8 h-8 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center text-[13px] active:scale-95 transition-transform"
+            className="active:scale-95 transition-transform"
           >
-            {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+            <UserAvatar user={user} size="sm" />
           </button>
         </div>
       </header>
@@ -142,11 +162,10 @@ export default function Navbar() {
                 <path d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center text-white text-xl font-bold mb-3 shadow-md shadow-brand-600/20">
-              {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+            <div className="mb-3">
+              <UserAvatar user={user} size="lg" />
             </div>
             <p className="font-semibold text-slate-900">{user?.name}</p>
-            <p className="text-slate-500 text-sm mt-0.5">{user?.email}</p>
             <p className="text-xs text-slate-400 mt-2">
               Ingreso: <span className="font-semibold text-slate-600">S/ {Number(user?.income ?? 0).toLocaleString('es-PE')}</span> / mes
             </p>
@@ -170,7 +189,7 @@ export default function Navbar() {
               onClick={() => { logout(); setDrawerOpen(false) }}
               className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-medium text-sm active:scale-[0.98] transition-all"
             >
-              Cerrar sesión
+              Cambiar de usuario
             </button>
           </div>
         </div>
