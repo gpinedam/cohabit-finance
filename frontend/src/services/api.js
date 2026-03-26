@@ -34,6 +34,12 @@ export const loginWithPassword = (email, password) =>
 export const loginWithPin = (email, pin) =>
   api.post('/auth/pin-login', { email, pin })
 
+export const loginWithPinById = (user_id, pin) =>
+  api.post('/auth/pin-login-id', { user_id, pin })
+
+export const listUsers = () =>
+  api.get('/auth/users')
+
 // --- Users ---
 export const getMe = () => api.get('/users/me')
 export const updateMe = (data) => api.put('/users/me', data)

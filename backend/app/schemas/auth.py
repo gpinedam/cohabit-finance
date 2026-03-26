@@ -9,3 +9,8 @@ class Token(BaseModel):
 class PinLoginRequest(BaseModel):
     email: str
     pin: str
+
+
+class PinLoginByIdRequest(BaseModel):
+    user_id: int
+    pin: str

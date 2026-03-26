@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from sqlalchemy import inspect, text
 
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, get_pin_hash
 from app.models.couple import Couple, CoupleMember  # noqa: F401 – register with Base
 from app.models.expense import Expense, ExpenseSplit, Payment  # noqa: F401
 from app.models.user import User  # noqa: F401
@@ -46,18 +46,28 @@ def _seed() -> None:
     db = SessionLocal()
     try:
         if db.query(User).count() > 0:
+            # Ensure both seed users always have the default PIN (idempotent)
+            for email in ("a@cohabit.local", "b@cohabit.local"):
+                u = db.query(User).filter(User.email == email).first()
+                if u and not u.pin_hash:
+                    u.pin_hash = get_pin_hash("111111")
+            db.commit()
             return
+
+        default_pin = get_pin_hash("111111")
 
         user_a = User(
             name="Usuario A",
             email="a@cohabit.local",
             hashed_password=get_password_hash("demo1234"),
+            pin_hash=default_pin,
             income=Decimal("3000.00"),
         )
         user_b = User(
             name="Usuario B",
             email="b@cohabit.local",
             hashed_password=get_password_hash("demo1234"),
+            pin_hash=default_pin,
             income=Decimal("2000.00"),
         )
         db.add_all([user_a, user_b])
@@ -72,7 +82,7 @@ def _seed() -> None:
             CoupleMember(user_id=user_b.id, couple_id=couple.id),
         ])
         db.commit()
-        logger.info("Seed: created demo couple (a@cohabit.local / b@cohabit.local, pw: demo1234)")
+        logger.info("Seed: created demo couple with PIN 111111 for both users")
     except Exception:
         db.rollback()
         raise
