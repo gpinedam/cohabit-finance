@@ -37,6 +37,20 @@ class ExpenseCreate(BaseModel):
         return self
 
 
+class ExpenseUpdate(BaseModel):
+    category: str | None = None
+    subcategory: str | None = None
+    description: str | None = None
+    total_amount: Decimal | None = None
+
+    @field_validator("total_amount")
+    @classmethod
+    def amount_must_be_positive(cls, v: Decimal | None) -> Decimal | None:
+        if v is not None and v <= 0:
+            raise ValueError("El monto debe ser mayor que 0")
+        return v
+
+
 class SplitRead(BaseModel):
     id: int
     user_id: int

@@ -62,6 +62,8 @@ export const createExpense = (data) => api.post('/expenses/', data)
 export const listExpenses = (coupleId, skip = 0, limit = 50) =>
   api.get('/expenses/', { params: { couple_id: coupleId, skip, limit } })
 export const getExpense = (id) => api.get(`/expenses/${id}`)
+export const updateExpense = (id, data) => api.patch(`/expenses/${id}`, data)
+export const deleteExpense = (id) => api.delete(`/expenses/${id}`)
 
 // --- Reports ---
 export const getBalance = (coupleId) =>
@@ -70,5 +72,11 @@ export const getMonthly = (coupleId, year, month) =>
   api.get('/reports/monthly', { params: { couple_id: coupleId, year, month } })
 export const getHistory = (coupleId) =>
   api.get('/reports/history', { params: { couple_id: coupleId } })
+export const exportHistory = (coupleId, year = null, month = null) => {
+  const params = { couple_id: coupleId }
+  if (year) params.year = year
+  if (month) params.month = month
+  return api.get('/reports/export', { params, responseType: 'blob' })
+}
 
 export default api

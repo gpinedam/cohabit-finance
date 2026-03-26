@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.dependencies.auth import get_current_user, get_db
 from app.models.user import User
-from app.schemas.expense import ExpenseCreate, ExpenseRead
-from app.services.expense_service import create_expense, get_expense, get_expenses
+from app.schemas.expense import ExpenseCreate, ExpenseRead, ExpenseUpdate
+from app.services.expense_service import create_expense, delete_expense, get_expense, get_expenses, update_expense
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -36,3 +36,22 @@ def retrieve(
     current_user: User = Depends(get_current_user),
 ):
     return get_expense(db, expense_id, current_user.id)
+
+
+@router.patch("/{expense_id}", response_model=ExpenseRead)
+def update(
+    expense_id: int,
+    body: ExpenseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return update_expense(db, expense_id, body, current_user.id)
+
+
+@router.delete("/{expense_id}", status_code=204)
+def remove(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    delete_expense(db, expense_id, current_user.id)
