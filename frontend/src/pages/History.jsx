@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { deleteExpense, exportHistory, getHistory, getMonthly, updateExpense } from '../services/api'
+import CATEGORIES_DATA from '../data/expense-categories.json'
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const CATEGORIES  = ['Supermercado','Alquiler','Servicios','Ocio','Restaurante','Transporte','Salud','Otros']
-const CATEGORY_EMOJI = {
-  Supermercado: '🛍️', Alquiler: '🏠', Servicios: '⚡',
-  Ocio: '🎬', Restaurante: '🍴', Transporte: '🚗', Salud: '🩺', Otros: '📦',
-}
+const CATEGORIES  = CATEGORIES_DATA.map(c => c.name)
+const CATEGORY_EMOJI = Object.fromEntries(CATEGORIES_DATA.map(c => [c.name, c.emoji]))
 
 /* ── Edit bottom-sheet ─────────────────────────────────────────────── */
 function EditSheet({ expense, onClose, onSaved }) {

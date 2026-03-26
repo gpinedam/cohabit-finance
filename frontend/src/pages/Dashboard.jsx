@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [confirming,  setConfirming]  = useState(false)
   const [settling,    setSettling]    = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [toast,       setToast]       = useState('')
 
   const load = async () => {
     if (!coupleId) return
@@ -69,8 +70,11 @@ export default function Dashboard() {
       const now = new Date()
       const r = await listRecurringEntries(coupleId, now.getFullYear(), now.getMonth() + 1)
       setRecurring(r.data)
+      setToast('paid')
+      setTimeout(() => setToast(''), 2200)
     } catch {
-      // silently handled — user can retry
+      setToast('error')
+      setTimeout(() => setToast(''), 2200)
     }
   }
 
@@ -80,7 +84,12 @@ export default function Dashboard() {
       const now = new Date()
       const r = await listRecurringEntries(coupleId, now.getFullYear(), now.getMonth() + 1)
       setRecurring(r.data)
-    } catch {}
+      setToast('skipped')
+      setTimeout(() => setToast(''), 2200)
+    } catch {
+      setToast('error')
+      setTimeout(() => setToast(''), 2200)
+    }
   }
 
   if (loading) return (
@@ -105,6 +114,17 @@ export default function Dashboard() {
 
   return (
     <div className="pt-16 pb-24 max-w-lg mx-auto">
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-2xl text-sm font-semibold shadow-lg transition-all animate-slide-up ${
+          toast === 'paid'    ? 'bg-emerald-500 text-white' :
+          toast === 'skipped' ? 'bg-slate-500 text-white'   :
+                                'bg-rose-500 text-white'
+        }`}>
+          {toast === 'paid' ? '✓ Gasto fijo registrado' : toast === 'skipped' ? 'Entrada omitida' : 'No se pudo completar'}
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div className="px-5 pt-6 pb-4 flex items-center justify-between">

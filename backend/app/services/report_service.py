@@ -5,6 +5,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from fastapi import HTTPException
+from sqlalchemy import extract
 from sqlalchemy.orm import Session
 
 from app.models.couple import CoupleMember
@@ -70,18 +71,16 @@ def get_history(db: Session, couple_id: int, current_user_id: int) -> list[dict]
 def get_monthly(db: Session, couple_id: int, year: int, month: int, current_user_id: int) -> dict:
     _check_membership(db, couple_id, current_user_id)
 
-    expenses = (
+    month_expenses = (
         db.query(Expense)
         .filter(
             Expense.couple_id == couple_id,
             Expense.scope == "shared",
+            extract("year", Expense.created_at) == year,
+            extract("month", Expense.created_at) == month,
         )
         .all()
     )
-    month_expenses = [
-        e for e in expenses
-        if e.created_at.year == year and e.created_at.month == month
-    ]
 
     total = Decimal("0")
     by_category: dict[str, Decimal] = {}
@@ -112,25 +111,25 @@ def get_personal_summary(
     emergency_fund_pct = user.emergency_fund_pct or 0
 
     # Compute user's portion of shared expenses this month from ExpenseSplit
-    shared_expenses = (
-        db.query(Expense)
+    shared_expense_ids = [
+        row.id for row in db.query(Expense.id)
         .filter(
             Expense.couple_id == couple_id,
             Expense.scope == "shared",
+            extract("year", Expense.created_at) == year,
+            extract("month", Expense.created_at) == month,
+        )
+        .all()
+    ]
+    splits_this_month = (
+        db.query(ExpenseSplit)
+        .filter(
+            ExpenseSplit.expense_id.in_(shared_expense_ids),
+            ExpenseSplit.user_id == current_user_id,
         )
         .all()
     )
-    shared_spent = Decimal("0")
-    for e in shared_expenses:
-        if e.created_at.year != year or e.created_at.month != month:
-            continue
-        split = (
-            db.query(ExpenseSplit)
-            .filter(ExpenseSplit.expense_id == e.id, ExpenseSplit.user_id == current_user_id)
-            .first()
-        )
-        if split:
-            shared_spent += Decimal(str(split.amount))
+    shared_spent = sum(Decimal(str(s.amount)) for s in splits_this_month)
 
     # Private expenses for this user this month
     private_expenses = (
@@ -139,13 +138,12 @@ def get_personal_summary(
             Expense.couple_id == couple_id,
             Expense.scope == "private",
             Expense.paid_by == current_user_id,
+            extract("year", Expense.created_at) == year,
+            extract("month", Expense.created_at) == month,
         )
         .all()
     )
-    private_spent = Decimal("0")
-    for e in private_expenses:
-        if e.created_at.year == year and e.created_at.month == month:
-            private_spent += Decimal(str(e.total_amount))
+    private_spent = sum(Decimal(str(e.total_amount)) for e in private_expenses)
 
     savings_reserved = (income * savings_goal_pct / 100).quantize(Decimal("0.01"))
     emergency_reserved = (income * emergency_fund_pct / 100).quantize(Decimal("0.01"))

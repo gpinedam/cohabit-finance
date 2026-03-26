@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import ExpenseForm from '../components/ExpenseForm'
 import { useAuth } from '../context/AuthContext'
-import { createExpense, listExpenses } from '../services/api'
+import { createExpense, listExpenses, listPrivateExpenses } from '../services/api'
 import api from '../services/api'
 
 const CATEGORY_EMOJI = {
@@ -34,8 +34,18 @@ export default function Home() {
         setMembers(Object.entries(names).map(([id, name]) => ({ id: Number(id), name })))
       })
       .catch(() => {})
-    api.get('/expenses/', { params: { couple_id: resolvedCouple, limit: 3 } })
-      .then((r) => setRecent(r.data))
+    api.get('/expenses/', { params: { couple_id: resolvedCouple, limit: 10 } })
+      .then(async (r) => {
+        try {
+          const priv = await listPrivateExpenses(0, 10)
+          const combined = [...r.data, ...priv.data]
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 3)
+          setRecent(combined)
+        } catch {
+          setRecent(r.data.slice(0, 3))
+        }
+      })
       .catch(() => {})
     const now = new Date()
     api.get('/reports/monthly', { params: { couple_id: resolvedCouple, year: now.getFullYear(), month: now.getMonth() + 1 } })
@@ -50,13 +60,17 @@ export default function Home() {
       await createExpense({ ...payload, couple_id: resolvedCouple })
       setToast('ok')
       setTimeout(() => setToast(''), 2200)
-      const [expenses, monthly] = await Promise.all([
-        listExpenses(resolvedCouple, 0, 3),
+      const [expenses, privExpenses, monthly] = await Promise.all([
+        listExpenses(resolvedCouple, 0, 10),
+        listPrivateExpenses(0, 10),
         api.get('/reports/monthly', {
           params: { couple_id: resolvedCouple, year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
         }),
       ])
-      setRecent(expenses.data)
+      const combined = [...expenses.data, ...privExpenses.data]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 3)
+      setRecent(combined)
       setMonthTotal(monthly.data.total)
     } catch (err) {
       setToast('err:' + (err.response?.data?.detail || 'Error al registrar'))
@@ -115,7 +129,12 @@ export default function Home() {
                   {CATEGORY_EMOJI[e.category] || '📦'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-800 text-sm leading-tight">{e.category}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-slate-800 text-sm leading-tight">{e.category}</p>
+                    {e.scope === 'private' && (
+                      <span className="text-[10px] font-semibold bg-violet-50 text-violet-500 border border-violet-100 rounded-full px-1.5 py-0.5">🔒 Personal</span>
+                    )}
+                  </div>
                   {(e.subcategory || e.description) && (
                     <p className="text-xs text-slate-400 mt-0.5 truncate">{e.subcategory || e.description}</p>
                   )}

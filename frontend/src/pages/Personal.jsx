@@ -185,6 +185,14 @@ export default function Personal() {
           color="bg-gradient-to-br from-amber-500 to-orange-500"
           saving={savingEmergency}
         />
+        {(savingsPct + emergencyPct) > 70 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
+            <span className="text-amber-500 text-base mt-0.5">⚠️</span>
+            <p className="text-sm text-amber-700">
+              Estás reservando el <strong>{savingsPct + emergencyPct}%</strong> de tu ingreso ({fmt(savingsAmt + emergencyAmt)}). Asegúrate de que te queda suficiente para gastos del día a día.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── Private expenses this month ── */}

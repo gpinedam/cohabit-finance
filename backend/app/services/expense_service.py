@@ -150,6 +150,15 @@ def delete_expense(db: Session, expense_id: int, current_user_id: int) -> None:
     if current_user_id not in {m.id for m in members}:
         raise HTTPException(status_code=403, detail="No perteneces a esta pareja")
 
+    # Reset any recurring entry that was fulfilled by this expense
+    from app.models.recurring import RecurringEntry
+    entry = db.query(RecurringEntry).filter(RecurringEntry.expense_id == expense_id).first()
+    if entry:
+        entry.status = "pending"
+        entry.expense_id = None
+        entry.paid_by_user_id = None
+        entry.paid_at = None
+
     db.query(ExpenseSplit).filter(ExpenseSplit.expense_id == expense.id).delete()
     db.delete(expense)
     db.commit()

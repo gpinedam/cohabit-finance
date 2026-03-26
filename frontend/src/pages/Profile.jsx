@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { deleteAvatar, deletePin, updateMe, uploadAvatar } from '../services/api'
 
@@ -207,6 +207,36 @@ export default function Profile() {
             </div>
           )}
         </div>
+        {/* Goals summary */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Metas personales</p>
+            <Link to="/personal" className="text-xs text-brand-600 font-semibold hover:text-brand-700 transition-colors">
+              Editar →
+            </Link>
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎯</span>
+                <span className="text-sm text-slate-700">Ahorro mensual</span>
+              </div>
+              <span className="text-sm font-bold text-violet-600">
+                {user?.savings_goal_pct ?? 0}%
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🛡️</span>
+                <span className="text-sm text-slate-700">Fondo de emergencia</span>
+              </div>
+              <span className="text-sm font-bold text-amber-600">
+                {user?.emergency_fund_pct ?? 0}%
+              </span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   )

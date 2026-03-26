@@ -51,6 +51,12 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN emergency_fund_pct INTEGER"))
             conn.commit()
             logger.info("Migration: added users.emergency_fund_pct")
+        # Unique constraint to prevent duplicate recurring entries for same service+month
+        conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_recurring_entry "
+            "ON recurring_entries (service_id, year, month)"
+        ))
+        conn.commit()
         # settlements and recurring tables are created by Base.metadata.create_all via the model imports
 
 
