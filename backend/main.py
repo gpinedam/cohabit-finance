@@ -12,9 +12,17 @@ from db.init_db import init_db
 
 logging.basicConfig(level=logging.INFO)
 
-# Ensure data/ and avatars/ dirs exist
-Path("data").mkdir(exist_ok=True)
-Path("data/avatars").mkdir(exist_ok=True)
+# On Azure App Service, /home is the persistent storage mount.
+# Locally, we fall back to ./data
+_AZURE_HOME = Path("/home")
+DATA_DIR = _AZURE_HOME / "data" if (_AZURE_HOME / "data").exists() or os.getenv("WEBSITE_SITE_NAME") else Path("data")
+
+AVATARS_DIR = DATA_DIR / "avatars"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Export for other modules that resolve paths at import time
+os.environ.setdefault("COHABIT_DATA_DIR", str(DATA_DIR))
 
 app = FastAPI(title="Cohabit Finance API", version="1.0.0")
 
@@ -41,8 +49,8 @@ app.include_router(reports.router, prefix="/api")
 app.include_router(settlements.router, prefix="/api")
 
 
-# Serve user avatars
-app.mount("/avatars", StaticFiles(directory="data/avatars"), name="avatars")
+# Serve user avatars from persistent storage
+app.mount("/avatars", StaticFiles(directory=str(AVATARS_DIR)), name="avatars")
 
 # Serve React SPA in production
 DIST_DIR = Path(__file__).parent / "frontend" / "dist"

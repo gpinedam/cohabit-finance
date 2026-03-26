@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
@@ -9,7 +10,10 @@ from app.models.couple import CoupleMember
 from app.models.user import User
 from app.schemas.user import PinStatus, PinUpdate, UserRead, UserUpdate
 
-AVATARS_DIR = Path("data/avatars")
+def _avatars_dir() -> Path:
+    """Resolved lazily so COHABIT_DATA_DIR is read after main.py sets it."""
+    return Path(os.getenv("COHABIT_DATA_DIR", "data")) / "avatars"
+
 ALLOWED_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 
@@ -94,15 +98,16 @@ async def upload_avatar(
     if len(contents) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="La imagen no puede superar los 5 MB")
 
-    AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+    AVATARS = _avatars_dir()
+    AVATARS.mkdir(parents=True, exist_ok=True)
     ext = ALLOWED_TYPES[file.content_type]
     filename = f"{current_user.id}.{ext}"
 
     # Remove previous avatar files for this user (any extension)
-    for old in AVATARS_DIR.glob(f"{current_user.id}.*"):
+    for old in AVATARS.glob(f"{current_user.id}.*"):
         old.unlink(missing_ok=True)
 
-    (AVATARS_DIR / filename).write_bytes(contents)
+    (AVATARS / filename).write_bytes(contents)
     current_user.avatar = filename
     db.commit()
     db.refresh(current_user)
@@ -115,7 +120,8 @@ def delete_avatar(
     current_user: User = Depends(get_current_user),
 ):
     if current_user.avatar:
-        for old in AVATARS_DIR.glob(f"{current_user.id}.*"):
+        AVATARS = _avatars_dir()
+        for old in AVATARS.glob(f"{current_user.id}.*"):
             old.unlink(missing_ok=True)
     current_user.avatar = None
     db.commit()
