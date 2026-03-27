@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
+  deleteExpense,
   deleteExtraIncome,
   exportPersonalTracker,
   getPersonalSummary,
@@ -571,6 +572,20 @@ export default function Personal() {
                 <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0">
                   {fmt(e.total_amount)}
                 </span>
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Eliminar este gasto?')) return
+                    try {
+                      await deleteExpense(e.id)
+                      loadData()
+                    } catch {}
+                  }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-200 hover:text-rose-400 hover:bg-rose-50 transition-colors shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                  </svg>
+                </button>
               </div>
             ))}
           </div>

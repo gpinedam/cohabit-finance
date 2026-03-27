@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import ExpenseForm from '../components/ExpenseForm'
 import { useAuth } from '../context/AuthContext'
-import { createExpense, listExpenses, listPrivateExpenses } from '../services/api'
+import { createExpense, deleteExpense, listExpenses, listPrivateExpenses } from '../services/api'
 import api from '../services/api'
 
 const CATEGORY_EMOJI = {
@@ -52,6 +52,31 @@ export default function Home() {
       .then((r) => setMonthTotal(r.data.total))
       .catch(() => {})
   }, [resolvedCouple])
+
+  const refreshRecent = async () => {
+    const [expenses, privExpenses] = await Promise.all([
+      listExpenses(resolvedCouple, 0, 10),
+      listPrivateExpenses(0, 10),
+    ])
+    const combined = [...expenses.data, ...privExpenses.data]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 3)
+    setRecent(combined)
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar este gasto?')) return
+    try {
+      await deleteExpense(id)
+      await refreshRecent()
+      const now = new Date()
+      api.get('/reports/monthly', { params: { couple_id: resolvedCouple, year: now.getFullYear(), month: now.getMonth() + 1 } })
+        .then(r => setMonthTotal(r.data.total)).catch(() => {})
+    } catch {
+      setToast('err:No se pudo eliminar')
+      setTimeout(() => setToast(''), 3000)
+    }
+  }
 
   const handleSubmit = async (payload) => {
     if (!resolvedCouple) return
@@ -124,7 +149,7 @@ export default function Home() {
           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">Últimos gastos</p>
           <div className="flex flex-col gap-1.5">
             {recent.map((e) => (
-              <div key={e.id} className="bg-white rounded-2xl px-4 py-3 border border-slate-100 flex items-center gap-3">
+              <div key={e.id} className="bg-white rounded-2xl px-4 py-3 border border-slate-100 flex items-center gap-3 group">
                 <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-lg shrink-0">
                   {CATEGORY_EMOJI[e.category] || '📦'}
                 </div>
@@ -142,6 +167,14 @@ export default function Home() {
                 <span className="font-bold text-slate-900 text-sm shrink-0 tabular-nums">
                   S/ {Number(e.total_amount).toFixed(2)}
                 </span>
+                <button
+                  onClick={() => handleDelete(e.id)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-200 hover:text-rose-400 hover:bg-rose-50 transition-colors shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                  </svg>
+                </button>
               </div>
             ))}
           </div>
