@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { deleteAvatar, deletePin, updateMe, uploadAvatar } from '../services/api'
+import { deleteAvatar, deletePin, getSecurityQuestionStatus, setSecurityQuestion, updateMe, uploadAvatar } from '../services/api'
 
 function Avatar({ user, size = 'lg' }) {
   const dim = size === 'lg' ? 'w-24 h-24 text-3xl rounded-3xl' : 'w-16 h-16 text-xl rounded-2xl'
@@ -21,6 +21,13 @@ function Avatar({ user, size = 'lg' }) {
   )
 }
 
+const PRESET_QUESTIONS = [
+  '¿Cuál es el apodo de tu pareja?',
+  '¿Cuál es tu plato favorito?',
+  '¿En qué ciudad se conocieron?',
+  '¿Cuál es el nombre de tu mascota?',
+]
+
 export default function Profile() {
   const { user, setUser, logout, lockScreen } = useAuth()
   const navigate = useNavigate()
@@ -31,6 +38,19 @@ export default function Profile() {
   const [saving, setSaving]     = useState(false)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg]           = useState('')
+
+  const [sqStatus, setSqStatus]     = useState(null)
+  const [sqOpen, setSqOpen]         = useState(false)
+  const [sqSelected, setSqSelected] = useState(PRESET_QUESTIONS[0])
+  const [sqCustom, setSqCustom]     = useState('')
+  const [sqAnswer, setSqAnswer]     = useState('')
+  const [sqSaving, setSqSaving]     = useState(false)
+
+  useEffect(() => {
+    getSecurityQuestionStatus()
+      .then((r) => setSqStatus(r.data.has_question))
+      .catch(() => setSqStatus(false))
+  }, [])
 
   const flash = (type) => { setMsg(type); setTimeout(() => setMsg(''), 2500) }
 
@@ -75,6 +95,25 @@ export default function Profile() {
       localStorage.removeItem('pinEnabled')
       flash('saved')
     } catch { flash('error') }
+  }
+
+  const normAnswer = (v) => v.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+
+  const handleSaveSQ = async () => {
+    const question = sqSelected === 'CUSTOM' ? sqCustom.trim() : sqSelected
+    const answer = sqAnswer.trim()
+    if (!question || !answer) return
+    setSqSaving(true)
+    try {
+      await setSecurityQuestion(question, answer)
+      setSqStatus(true)
+      setSqOpen(false)
+      setSqAnswer('')
+      setSqCustom('')
+      flash('saved')
+    } catch {
+      flash('error')
+    } finally { setSqSaving(false) }
   }
 
   const pinEnabled = localStorage.getItem('pinEnabled') === 'true'
@@ -207,6 +246,88 @@ export default function Profile() {
             </div>
           )}
         </div>
+        {/* Security question */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pregunta de seguridad</p>
+            {sqStatus && !sqOpen && (
+              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                </svg>
+                Configurada
+              </span>
+            )}
+          </div>
+          {!sqOpen ? (
+            <button
+              onClick={() => setSqOpen(true)}
+              className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 active:scale-[0.98] transition-all"
+            >
+              {sqStatus ? 'Cambiar pregunta de seguridad' : 'Configurar pregunta de seguridad'}
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Pregunta</label>
+                <select
+                  value={sqSelected}
+                  onChange={(e) => setSqSelected(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400 text-sm text-slate-800"
+                >
+                  {PRESET_QUESTIONS.map((q) => (
+                    <option key={q} value={q}>{q}</option>
+                  ))}
+                  <option value="CUSTOM">✏️ Escribir mi propia pregunta…</option>
+                </select>
+              </div>
+              {sqSelected === 'CUSTOM' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Tu pregunta personalizada</label>
+                  <input
+                    type="text"
+                    value={sqCustom}
+                    onChange={(e) => setSqCustom(e.target.value)}
+                    placeholder="¿Cuál es…?"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400 text-sm"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Respuesta</label>
+                <input
+                  type="text"
+                  value={sqAnswer}
+                  onChange={(e) => setSqAnswer(normAnswer(e.target.value))}
+                  placeholder="SOLO LETRAS Y NÚMEROS"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400 text-sm font-semibold tracking-widest uppercase"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Solo letras y números, sin tildes ni caracteres especiales</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => { setSqOpen(false); setSqAnswer(''); setSqCustom('') }}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 font-medium text-sm hover:bg-slate-50 active:scale-[0.98] transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveSQ}
+                  disabled={sqSaving || !sqAnswer.trim() || (sqSelected === 'CUSTOM' && !sqCustom.trim())}
+                  className="flex-1 py-3 bg-brand-600 text-white rounded-xl font-semibold text-sm disabled:opacity-40 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  {sqSaving ? (
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Goals summary */}
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center justify-between mb-4">

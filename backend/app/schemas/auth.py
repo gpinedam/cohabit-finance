@@ -14,3 +14,13 @@ class PinLoginRequest(BaseModel):
 class PinLoginByIdRequest(BaseModel):
     user_id: int
     pin: str
+
+
+class SecurityAnswerRequest(BaseModel):
+    user_id: int
+    answer: str
+
+
+class SecurityQuestionRequest(BaseModel):
+    question: str
+    answer: str

@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -11,6 +12,7 @@ from app.models.extra_income import ExtraIncome
 from app.models.user import User
 from app.schemas.extra_income import ExtraIncomeRead, ExtraIncomeUpsert
 from app.schemas.user import PinStatus, PinUpdate, UserRead, UserUpdate
+from app.schemas.auth import SecurityQuestionRequest
 
 def _avatars_dir() -> Path:
     """Resolved lazily so COHABIT_DATA_DIR is read after main.py sets it."""
@@ -206,3 +208,25 @@ def delete_extra_income(
     if entry:
         db.delete(entry)
         db.commit()
+
+
+# ── Security question ─────────────────────────────────────────────────────────
+
+@router.get("/me/security-question-status")
+def get_security_question_status(current_user: User = Depends(get_current_user)):
+    return {"has_question": bool(current_user.security_question)}
+
+
+@router.put("/me/security-question")
+def set_user_security_question(
+    body: SecurityQuestionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    normalized = re.sub(r'[^A-Z0-9]', '', body.answer.upper())
+    if not normalized:
+        raise HTTPException(status_code=400, detail="La respuesta no puede estar vacía")
+    current_user.security_question = body.question.strip()
+    current_user.security_answer_hash = get_pin_hash(normalized)
+    db.commit()
+    return {"ok": True}

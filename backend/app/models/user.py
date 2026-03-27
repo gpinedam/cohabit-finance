@@ -17,4 +17,6 @@ class User(Base):
     savings_goal_pct = Column(Integer, nullable=True)
     emergency_fund_pct = Column(Integer, nullable=True)
     avatar = Column(String(255), nullable=True)
+    security_question = Column(String(500), nullable=True)
+    security_answer_hash = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

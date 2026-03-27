@@ -46,6 +46,10 @@ export const updateMe = (data) => api.put('/users/me', data)
 export const getPinStatus = () => api.get('/users/me/pin-status')
 export const setPin = (pin) => api.put('/users/me/pin', { pin })
 export const deletePin = () => api.delete('/users/me/pin')
+export const getSecurityQuestionStatus = () => api.get('/users/me/security-question-status')
+export const setSecurityQuestion = (question, answer) => api.put('/users/me/security-question', { question, answer })
+export const getSecurityQuestion = (userId) => api.get(`/auth/security-question/${userId}`)
+export const answerSecurityQuestion = (userId, answer) => api.post('/auth/security-answer', { user_id: userId, answer })
 
 export const uploadAvatar = (file) => {
   const form = new FormData()

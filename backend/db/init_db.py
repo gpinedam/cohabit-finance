@@ -68,6 +68,14 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TABLE couple_goals ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE"))
             conn.commit()
             logger.info("Migration: added couple_goals.user_id")
+        if not _column_exists("users", "security_question"):
+            conn.execute(text("ALTER TABLE users ADD COLUMN security_question VARCHAR(500)"))
+            conn.commit()
+            logger.info("Migration: added users.security_question")
+        if not _column_exists("users", "security_answer_hash"):
+            conn.execute(text("ALTER TABLE users ADD COLUMN security_answer_hash VARCHAR(255)"))
+            conn.commit()
+            logger.info("Migration: added users.security_answer_hash")
         # settlements and recurring tables are created by Base.metadata.create_all via the model imports
 
 

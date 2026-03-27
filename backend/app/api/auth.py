@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -6,7 +8,7 @@ from app.core.security import create_access_token, verify_password, verify_pin
 from app.dependencies.auth import get_db
 from app.models.couple import CoupleMember
 from app.models.user import User
-from app.schemas.auth import PinLoginByIdRequest, PinLoginRequest, Token
+from app.schemas.auth import PinLoginByIdRequest, PinLoginRequest, SecurityAnswerRequest, Token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -52,3 +54,25 @@ def list_users(db: Session = Depends(get_db)):
     """Public endpoint: returns all users (id + name + avatar) for the login screen."""
     users = db.query(User).order_by(User.id).all()
     return [{"id": u.id, "name": u.name, "avatar": u.avatar} for u in users]
+
+
+@router.get("/security-question/{user_id}")
+def get_security_question(user_id: int, db: Session = Depends(get_db)):
+    """Public: return the security question text for a user (no auth needed)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.security_question:
+        raise HTTPException(status_code=404, detail="Sin pregunta de seguridad configurada")
+    return {"question": user.security_question}
+
+
+@router.post("/security-answer", response_model=Token)
+def verify_security_answer(body: SecurityAnswerRequest, db: Session = Depends(get_db)):
+    """Public: verify security answer and return a JWT (fallback when PIN is forgotten)."""
+    user = db.query(User).filter(User.id == body.user_id).first()
+    if not user or not user.security_answer_hash:
+        raise HTTPException(status_code=401, detail="Sin pregunta de seguridad configurada")
+    normalized = re.sub(r'[^A-Z0-9]', '', body.answer.upper())
+    if not verify_pin(normalized, user.security_answer_hash):
+        raise HTTPException(status_code=401, detail="Respuesta incorrecta")
+    token = create_access_token({"sub": str(user.id)})
+    return Token(access_token=token)
