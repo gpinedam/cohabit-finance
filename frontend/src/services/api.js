@@ -121,4 +121,18 @@ export const upsertExtraIncome = (data) =>
 export const deleteExtraIncome = (year, month) =>
   api.delete(`/users/me/extra-income/${year}/${month}`)
 
+// --- Shared goals ---
+export const listGoals = (coupleId, includeArchived = false) =>
+  api.get('/goals/', { params: { couple_id: coupleId, include_archived: includeArchived } })
+export const createGoal = (data) =>
+  api.post('/goals/', data)
+export const updateGoal = (id, data) =>
+  api.patch(`/goals/${id}`, data)
+export const deleteGoal = (id) =>
+  api.delete(`/goals/${id}`)
+export const addDeposit = (goalId, data) =>
+  api.post(`/goals/${goalId}/deposits`, data)
+export const deleteDeposit = (goalId, depositId) =>
+  api.delete(`/goals/${goalId}/deposits/${depositId}`)
+
 export default api

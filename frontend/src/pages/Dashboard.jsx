@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { createSettlement, getBalance, listRecurringEntries, listSettlements, payRecurringEntry, skipRecurringEntry } from '../services/api'
+import { createSettlement, getBalance, listGoals, listRecurringEntries, listSettlements, payRecurringEntry, skipRecurringEntry } from '../services/api'
 
 const MONTH_NAMES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const MONTH_NAMES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [data,        setData]        = useState(null)
   const [settlements, setSettlements] = useState([])
   const [recurring,   setRecurring]   = useState(null)
+  const [goals,       setGoals]       = useState([])
   const [loading,     setLoad]        = useState(true)
   const [error,       setError]       = useState('')
   const [confirming,  setConfirming]  = useState(false)
@@ -34,14 +35,16 @@ export default function Dashboard() {
     if (!coupleId) return
     const now = new Date()
     try {
-      const [b, s, r] = await Promise.all([
+      const [b, s, r, g] = await Promise.all([
         getBalance(coupleId),
         listSettlements(coupleId),
         listRecurringEntries(coupleId, now.getFullYear(), now.getMonth() + 1),
+        listGoals(coupleId),
       ])
       setData(b.data)
       setSettlements(s.data)
       setRecurring(r.data)
+      setGoals(g.data)
     } catch {
       setError('No se pudo cargar el balance')
     } finally {
@@ -349,6 +352,66 @@ export default function Dashboard() {
               })}
             </div>
           </>
+        )}
+      </div>
+
+      {/* ── Metas compartidas ── */}
+      <div className="mx-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-slate-800 text-base">🎯 Metas compartidas</h2>
+          <Link to="/metas" className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors">
+            Ver todas
+          </Link>
+        </div>
+
+        {goals.length === 0 ? (
+          <Link to="/metas"
+            className="block bg-white border border-dashed border-slate-200 rounded-2xl p-5 text-center hover:border-brand-300 transition-colors">
+            <p className="text-2xl mb-1">🎯</p>
+            <p className="text-sm font-semibold text-slate-700">Sin metas aún</p>
+            <p className="text-slate-400 text-xs mt-0.5">Crea una meta de ahorro compartida</p>
+          </Link>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {goals.slice(0, 3).map(goal => {
+              const pct = Math.min(Number(goal.pct), 100)
+              const GRAD = {
+                violet: 'from-violet-600 to-indigo-600', emerald: 'from-emerald-500 to-teal-500',
+                amber:  'from-amber-500 to-orange-500',  rose:    'from-rose-500 to-pink-500',
+                blue:   'from-blue-500 to-cyan-500',     slate:   'from-slate-600 to-slate-500',
+              }
+              const grad = GRAD[goal.color] ?? GRAD.violet
+              return (
+                <Link key={goal.id} to="/metas"
+                  className="bg-white border border-slate-100 rounded-2xl px-4 py-3.5 flex items-center gap-3 hover:border-slate-200 transition-colors active:scale-[0.99]">
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-xl shrink-0`}>
+                    {goal.icon || (goal.goal_type === 'emergency' ? '🛡️' : '🎯')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{goal.name}</p>
+                      <p className="text-xs font-bold text-slate-500 tabular-nums shrink-0 ml-2">{pct.toFixed(0)}%</p>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full bg-gradient-to-r ${grad} rounded-full transition-all duration-500`}
+                        style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-[11px] text-slate-400 tabular-nums">S/ {Number(goal.accumulated).toFixed(0)} / S/ {Number(goal.target).toFixed(0)}</p>
+                      {Number(goal.this_month) > 0 && (
+                        <p className="text-[11px] text-emerald-500 font-semibold tabular-nums">+S/ {Number(goal.this_month).toFixed(0)} este mes</p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
+            {goals.length > 3 && (
+              <Link to="/metas" className="text-center text-xs font-semibold text-brand-600 py-1">
+                Ver {goals.length - 3} meta{goals.length - 3 > 1 ? 's' : ''} más →
+              </Link>
+            )}
+          </div>
         )}
       </div>
 

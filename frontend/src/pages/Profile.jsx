@@ -22,7 +22,7 @@ function Avatar({ user, size = 'lg' }) {
 }
 
 export default function Profile() {
-  const { user, setUser } = useAuth()
+  const { user, setUser, logout, lockScreen } = useAuth()
   const navigate = useNavigate()
   const fileRef = useRef(null)
 
@@ -235,6 +235,27 @@ export default function Profile() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Session actions */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Sesión</p>
+          <button
+            onClick={lockScreen}
+            className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm flex items-center justify-center gap-2 hover:bg-slate-50 active:scale-[0.98] transition-all"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Bloquear pantalla
+          </button>
+          <button
+            onClick={logout}
+            className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-medium text-sm hover:bg-red-100 active:scale-[0.98] transition-all"
+          >
+            Cambiar de usuario
+          </button>
         </div>
 
       </div>

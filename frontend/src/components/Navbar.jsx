@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -79,12 +78,26 @@ function IcPersonal({ a }) {
   )
 }
 
+function IcTarget({ a }) {
+  return a ? (
+    <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm0-13a5 5 0 1 0 0 10A5 5 0 0 0 12 7zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+    </svg>
+  ) : (
+    <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="6"/>
+      <circle cx="12" cy="12" r="2"/>
+    </svg>
+  )
+}
+
 const TABS = [
   { path: '/',          label: 'Inicio',    Icon: IcHome },
   { path: '/dashboard', label: 'Balance',   Icon: IcChartBars },
   { path: '/history',   label: 'Historial', Icon: IcClock },
+  { path: '/metas',     label: 'Metas',     Icon: IcTarget },
   { path: '/personal',  label: 'Personal',  Icon: IcPersonal },
-  { path: '/profile',   label: 'Perfil',    Icon: IcUser },
 ]
 
 // Muestra avatar o inicial
@@ -109,9 +122,8 @@ function UserAvatar({ user, size = 'sm' }) {
 }
 
 export default function Navbar() {
-  const { user, logout, lockScreen } = useAuth()
+  const { user } = useAuth()
   const location = useLocation()
-  const [drawerOpen, setDrawerOpen] = useState(false)
 
   return (
     <>
@@ -126,12 +138,9 @@ export default function Navbar() {
             </div>
             <span className="font-semibold text-slate-900 text-[15px] tracking-tight">Cohabit</span>
           </div>
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="active:scale-95 transition-transform"
-          >
+          <Link to="/profile" className="active:scale-95 transition-transform">
             <UserAvatar user={user} size="sm" />
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -156,59 +165,6 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Overlay */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 animate-fade-in" onClick={() => setDrawerOpen(false)} />
-      )}
-
-      {/* Side drawer */}
-      <aside
-        className={`fixed top-0 right-0 z-50 h-full w-72 bg-white shadow-2xl transition-transform duration-300 ease-out ${
-          drawerOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        <div className="flex flex-col h-full">
-          <div className="relative px-5 pt-14 pb-5">
-            <button
-              onClick={() => setDrawerOpen(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="mb-3">
-              <UserAvatar user={user} size="lg" />
-            </div>
-            <p className="font-semibold text-slate-900">{user?.name}</p>
-            <p className="text-xs text-slate-400 mt-2">
-              Ingreso: <span className="font-semibold text-slate-600">S/ {Number(user?.income ?? 0).toLocaleString('es-PE')}</span> / mes
-            </p>
-          </div>
-
-          <div className="mx-5 h-px bg-slate-100" />
-          <div className="flex-1" />
-
-          <div className="px-5 pb-10 flex flex-col gap-2">
-            <button
-              onClick={() => { lockScreen(); setDrawerOpen(false) }}
-              className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm flex items-center justify-center gap-2 hover:bg-slate-50 active:scale-[0.98] transition-all"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              Bloquear pantalla
-            </button>
-            <button
-              onClick={() => { logout(); setDrawerOpen(false) }}
-              className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-medium text-sm active:scale-[0.98] transition-all"
-            >
-              Cambiar de usuario
-            </button>
-          </div>
-        </div>
-      </aside>
     </>
   )
 }
