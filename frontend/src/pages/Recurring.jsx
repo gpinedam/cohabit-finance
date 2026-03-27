@@ -264,29 +264,33 @@ export default function Recurring() {
 
             <form onSubmit={handleSave} className="px-5 py-5 space-y-4 pb-10">
 
-              {/* Name + icon row */}
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Nombre</label>
-                  <input
-                    required
-                    type="text"
-                    value={form.name}
-                    onChange={e => set('name', e.target.value)}
-                    placeholder="Ej. Luz, Netflix, Alquiler…"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
-                  />
-                </div>
-                <div className="w-20">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Emoji</label>
-                  <input
-                    type="text"
-                    maxLength={2}
-                    value={form.icon}
-                    onChange={e => set('icon', e.target.value)}
-                    placeholder="💡"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-center text-lg focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
-                  />
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Nombre</label>
+                <input
+                  required
+                  type="text"
+                  value={form.name}
+                  onChange={e => set('name', e.target.value)}
+                  placeholder="Ej. Luz, Netflix, Alquiler…"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                />
+              </div>
+
+              {/* Icon picker */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Ícono</label>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {['💡','💧','🔥','📺','📶','🏠','🚗','🐕','🎵','📦','🧹','🛒','💈','🍕','☕','📋'].map(e => (
+                    <button key={e} type="button" onClick={() => set('icon', e)}
+                      className={`h-10 rounded-xl text-xl flex items-center justify-center transition-all ${
+                        form.icon === e
+                          ? 'bg-brand-600 scale-110 shadow-sm'
+                          : 'bg-slate-50 hover:bg-slate-100 active:scale-95'
+                      }`}>
+                      {e}
+                    </button>
+                  ))}
                 </div>
               </div>
 

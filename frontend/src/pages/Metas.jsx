@@ -79,19 +79,28 @@ function GoalSheet({ coupleId, existing, onClose, onSaved }) {
           </div>
         </div>
 
-        {/* Name + icon */}
-        <div className="flex gap-2">
-          <div className="w-16">
-            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Ícono</label>
-            <input type="text" value={form.icon} onChange={e => set('icon', e.target.value)}
-              placeholder="🏖️" maxLength={2}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-center text-lg outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
-          </div>
-          <div className="flex-1">
-            <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nombre</label>
-            <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
-              placeholder="Vacaciones, depa, fondo…"
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
+        {/* Name */}
+        <div>
+          <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nombre</label>
+          <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
+            placeholder="Vacaciones, depa, fondo…"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
+        </div>
+
+        {/* Icon picker */}
+        <div>
+          <label className="text-xs font-semibold text-slate-500 mb-2 block">Ícono</label>
+          <div className="grid grid-cols-8 gap-1.5">
+            {['🎯','🏖️','🏠','🚗','🛡️','✈️','💍','📱','🏋️','🎓','🍼','🐶','💻','🎸','⛷️','🌊'].map(e => (
+              <button key={e} type="button" onClick={() => set('icon', e)}
+                className={`h-10 rounded-xl text-xl flex items-center justify-center transition-all ${
+                  form.icon === e
+                    ? 'bg-brand-600 scale-110 shadow-sm'
+                    : 'bg-slate-50 hover:bg-slate-100 active:scale-95'
+                }`}>
+                {e}
+              </button>
+            ))}
           </div>
         </div>
 
