@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { deleteAvatar, deletePin, getSecurityQuestionStatus, setSecurityQuestion, updateMe, uploadAvatar } from '../services/api'
+import { deleteAvatar, getSecurityQuestionStatus, setSecurityQuestion, updateMe, uploadAvatar } from '../services/api'
 
 function Avatar({ user, size = 'lg' }) {
   const dim = size === 'lg' ? 'w-24 h-24 text-3xl rounded-3xl' : 'w-16 h-16 text-xl rounded-2xl'
@@ -226,12 +226,6 @@ export default function Profile() {
                 className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 active:scale-[0.98] transition-all"
               >
                 Cambiar PIN
-              </button>
-              <button
-                onClick={handleDeletePin}
-                className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-medium text-sm hover:bg-red-100 active:scale-[0.98] transition-all"
-              >
-                Eliminar PIN
               </button>
             </div>
           ) : (

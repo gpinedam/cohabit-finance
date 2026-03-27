@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.core.security import get_pin_hash, verify_pin
+from app.core.security import get_pin_hash, verify_pin, encrypt_pin
 from app.dependencies.auth import get_current_user, get_db
 from app.models.couple import CoupleMember
 from app.models.extra_income import ExtraIncome
@@ -79,6 +79,7 @@ def set_pin(
                     detail="Ese PIN ya lo está usando otro miembro de la pareja",
                 )
     current_user.pin_hash = get_pin_hash(body.pin)
+    current_user.pin_encrypted = encrypt_pin(body.pin)
     db.commit()
     return {"message": "PIN actualizado correctamente"}
 

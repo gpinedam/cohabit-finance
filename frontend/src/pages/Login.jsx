@@ -60,6 +60,7 @@ export default function Login() {
   const [sqAnswer, setSqAnswer]                 = useState('')
   const [sqError, setSqError]                   = useState(false)
   const [sqLoading, setSqLoading]               = useState(false)
+  const [revealedPin, setRevealedPin]           = useState(null)
 
   useEffect(() => {
     listUsers()
@@ -110,8 +111,17 @@ export default function Login() {
     setSqError(false)
     try {
       const res = await answerSecurityQuestion(selected.id, sqAnswer)
-      setPinSuccess(true)
-      afterLogin(res.data.access_token)
+      const pin = res.data.pin
+      if (pin) {
+        setRevealedPin(pin)
+        setTimeout(() => {
+          setRevealedPin(null)
+          afterLogin(res.data.access_token)
+        }, 3000)
+      } else {
+        setPinSuccess(true)
+        afterLogin(res.data.access_token)
+      }
     } catch {
       setSqLoading(false)
       setSqError(true)
@@ -169,7 +179,25 @@ export default function Login() {
   if (showSecurityQ) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col">
-        {pinSuccess && (
+        {/* PIN reveal overlay */}
+        {revealedPin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm px-8">
+            <div className="bg-white rounded-3xl px-8 py-8 flex flex-col items-center gap-4 shadow-2xl w-full max-w-xs animate-slide-up">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                <svg className="w-7 h-7 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tu PIN es</p>
+                <p className="text-4xl font-bold tracking-[0.3em] text-slate-900">{revealedPin}</p>
+              </div>
+              <p className="text-xs text-slate-400 text-center">Recuérdalo. Ingresando en unos segundos…</p>
+            </div>
+          </div>
+        )}
+
+        {pinSuccess && !revealedPin && (
           <div className="fixed inset-x-0 top-6 flex justify-center z-50 px-6">
             <div className="flex items-center gap-3 bg-emerald-500 text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-emerald-500/30 animate-slide-up">
               <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">

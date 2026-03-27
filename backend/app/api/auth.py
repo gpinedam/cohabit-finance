@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, verify_password, verify_pin
+from app.core.security import create_access_token, decrypt_pin, encrypt_pin, verify_password, verify_pin
 from app.dependencies.auth import get_db
 from app.models.couple import CoupleMember
 from app.models.user import User
@@ -45,6 +45,10 @@ def pin_login_by_id(body: PinLoginByIdRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PIN incorrecto")
     if not verify_pin(body.pin, user.pin_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="PIN incorrecto")
+    # Backfill encrypted PIN for security question recovery (first login after feature addition)
+    if not user.pin_encrypted:
+        user.pin_encrypted = encrypt_pin(body.pin)
+        db.commit()
     token = create_access_token({"sub": str(user.id)})
     return Token(access_token=token)
 
@@ -65,9 +69,9 @@ def get_security_question(user_id: int, db: Session = Depends(get_db)):
     return {"question": user.security_question}
 
 
-@router.post("/security-answer", response_model=Token)
+@router.post("/security-answer")
 def verify_security_answer(body: SecurityAnswerRequest, db: Session = Depends(get_db)):
-    """Public: verify security answer and return a JWT (fallback when PIN is forgotten)."""
+    """Public: verify security answer, return JWT + plaintext PIN for display."""
     user = db.query(User).filter(User.id == body.user_id).first()
     if not user or not user.security_answer_hash:
         raise HTTPException(status_code=401, detail="Sin pregunta de seguridad configurada")
@@ -75,4 +79,10 @@ def verify_security_answer(body: SecurityAnswerRequest, db: Session = Depends(ge
     if not verify_pin(normalized, user.security_answer_hash):
         raise HTTPException(status_code=401, detail="Respuesta incorrecta")
     token = create_access_token({"sub": str(user.id)})
-    return Token(access_token=token)
+    pin_plain = None
+    if user.pin_encrypted:
+        try:
+            pin_plain = decrypt_pin(user.pin_encrypted)
+        except Exception:
+            pass
+    return {"access_token": token, "token_type": "bearer", "pin": pin_plain}

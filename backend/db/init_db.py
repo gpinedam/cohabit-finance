@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from sqlalchemy import inspect, text
 
-from app.core.security import get_password_hash, get_pin_hash
+from app.core.security import get_password_hash, get_pin_hash, encrypt_pin
 from app.models.couple import Couple, CoupleMember  # noqa: F401 – register with Base
 from app.models.expense import Expense, ExpenseSplit, Payment  # noqa: F401
 from app.models.extra_income import ExtraIncome  # noqa: F401
@@ -76,6 +76,10 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN security_answer_hash VARCHAR(255)"))
             conn.commit()
             logger.info("Migration: added users.security_answer_hash")
+        if not _column_exists("users", "pin_encrypted"):
+            conn.execute(text("ALTER TABLE users ADD COLUMN pin_encrypted VARCHAR(512)"))
+            conn.commit()
+            logger.info("Migration: added users.pin_encrypted")
         # settlements and recurring tables are created by Base.metadata.create_all via the model imports
 
 
@@ -99,12 +103,14 @@ def _seed() -> None:
             return
 
         default_pin = get_pin_hash("111111")
+        default_pin_enc = encrypt_pin("111111")
 
         user_a = User(
             name="Usuario A",
             email="a@cohabit.local",
             hashed_password=get_password_hash("demo1234"),
             pin_hash=default_pin,
+            pin_encrypted=default_pin_enc,
             income=Decimal("3000.00"),
         )
         user_b = User(
@@ -112,6 +118,7 @@ def _seed() -> None:
             email="b@cohabit.local",
             hashed_password=get_password_hash("demo1234"),
             pin_hash=default_pin,
+            pin_encrypted=default_pin_enc,
             income=Decimal("2000.00"),
         )
         db.add_all([user_a, user_b])

@@ -19,4 +19,5 @@ class User(Base):
     avatar = Column(String(255), nullable=True)
     security_question = Column(String(500), nullable=True)
     security_answer_hash = Column(String(255), nullable=True)
+    pin_encrypted = Column(String(512), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
