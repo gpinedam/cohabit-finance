@@ -7,10 +7,12 @@ from pydantic import BaseModel, field_validator
 # ── Goal ──────────────────────────────────────────────────────────────────────
 
 class GoalCreate(BaseModel):
-    couple_id: int
+    couple_id: int | None = None
+    user_id: int | None = None
+    scope: str = "shared"   # "shared" | "private"
     name: str
     icon: str | None = None
-    goal_type: str = "savings"   # "savings" | "emergency"
+    goal_type: str = "savings"
     target: Decimal
     color: str = "violet"
 
@@ -52,16 +54,18 @@ class GoalDepositRead(BaseModel):
 
 class GoalRead(BaseModel):
     id: int
-    couple_id: int
+    couple_id: int | None
+    user_id: int | None = None
+    scope: str = "shared"
     name: str
     icon: str | None
     goal_type: str
     target: Decimal
     color: str | None
     is_active: int
-    accumulated: Decimal          # sum of all deposits
-    pct: float                    # accumulated / target * 100
-    this_month: Decimal           # deposits made this calendar month
+    accumulated: Decimal
+    pct: float
+    this_month: Decimal
     deposits: list[GoalDepositRead]
     created_at: datetime
 

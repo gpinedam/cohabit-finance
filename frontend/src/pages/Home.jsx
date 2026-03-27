@@ -10,7 +10,7 @@ const CATEGORY_EMOJI = {
 }
 
 export default function Home() {
-  const { user, coupleId, setCoupleId } = useAuth()
+  const { user, coupleId, setCoupleId, mode } = useAuth()
   const [members, setMembers]           = useState([])
   const [loading, setLoading]           = useState(false)
   const [toast, setToast]               = useState('')
@@ -38,12 +38,10 @@ export default function Home() {
       .then(async (r) => {
         try {
           const priv = await listPrivateExpenses(0, 10)
-          const combined = [...r.data, ...priv.data]
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 3)
-          setRecent(combined)
+          const list = mode === 'private' ? priv.data : r.data
+          setRecent(list.slice(0, 5))
         } catch {
-          setRecent(r.data.slice(0, 3))
+          setRecent(mode === 'private' ? [] : r.data.slice(0, 5))
         }
       })
       .catch(() => {})
@@ -58,10 +56,10 @@ export default function Home() {
       listExpenses(resolvedCouple, 0, 10),
       listPrivateExpenses(0, 10),
     ])
-    const combined = [...expenses.data, ...privExpenses.data]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 3)
-    setRecent(combined)
+    const all = mode === 'private'
+      ? privExpenses.data
+      : expenses.data
+    setRecent(all.slice(0, 5))
   }
 
   const handleDelete = async (id) => {
@@ -92,10 +90,8 @@ export default function Home() {
           params: { couple_id: resolvedCouple, year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
         }),
       ])
-      const combined = [...expenses.data, ...privExpenses.data]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 3)
-      setRecent(combined)
+      const combined = mode === 'private' ? privExpenses.data : expenses.data
+      setRecent(combined.slice(0, 5))
       setMonthTotal(monthly.data.total)
     } catch (err) {
       setToast('err:' + (err.response?.data?.detail || 'Error al registrar'))
@@ -104,6 +100,8 @@ export default function Home() {
       setLoading(false)
     }
   }
+
+  useEffect(() => { if (resolvedCouple) refreshRecent() }, [mode])
 
   const isErr   = toast.startsWith('err:')
   const toastMsg = isErr ? toast.replace('err:', '') : '¡Gasto registrado!'
@@ -140,13 +138,15 @@ export default function Home() {
 
       {/* ── Form card ── */}
       <div className="mx-4 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <ExpenseForm members={members} onSubmit={handleSubmit} loading={loading} />
+        <ExpenseForm members={members} onSubmit={handleSubmit} loading={loading} defaultScope={mode === 'private' ? 'private' : 'shared'} />
       </div>
 
       {/* ── Recent expenses ── */}
       {recent.length > 0 && (
         <div className="px-4 mt-6">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">Últimos gastos</p>
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">
+            {mode === 'private' ? 'Mis últimos gastos privados' : 'Últimos gastos compartidos'}
+          </p>
           <div className="flex flex-col gap-1.5">
             {recent.map((e) => (
               <div key={e.id} className="bg-white rounded-2xl px-4 py-3 border border-slate-100 flex items-center gap-3 group">

@@ -60,6 +60,8 @@ def _build_goal_read(goal: CoupleGoal, db: Session) -> GoalRead:
     return GoalRead(
         id=goal.id,
         couple_id=goal.couple_id,
+        user_id=goal.user_id,
+        scope=goal.scope or "shared",
         name=goal.name,
         icon=goal.icon,
         goal_type=goal.goal_type,
@@ -78,13 +80,25 @@ def _build_goal_read(goal: CoupleGoal, db: Session) -> GoalRead:
 
 @router.get("/", response_model=list[GoalRead])
 def list_goals(
-    couple_id: int = Query(...),
+    couple_id: int | None = Query(None),
+    scope: str = Query("shared"),
     include_archived: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _check_membership(db, couple_id, current_user.id)
-    q = db.query(CoupleGoal).filter(CoupleGoal.couple_id == couple_id)
+    if scope == "private":
+        q = db.query(CoupleGoal).filter(
+            CoupleGoal.user_id == current_user.id,
+            CoupleGoal.scope == "private",
+        )
+    else:
+        if couple_id is None:
+            return []
+        _check_membership(db, couple_id, current_user.id)
+        q = db.query(CoupleGoal).filter(
+            CoupleGoal.couple_id == couple_id,
+            CoupleGoal.scope == "shared",
+        )
     if not include_archived:
         q = q.filter(CoupleGoal.is_active == 1)
     goals = q.order_by(CoupleGoal.created_at).all()
@@ -97,15 +111,31 @@ def create_goal(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _check_membership(db, body.couple_id, current_user.id)
-    goal = CoupleGoal(
-        couple_id=body.couple_id,
-        name=body.name,
-        icon=body.icon,
-        goal_type=body.goal_type,
-        target=body.target,
-        color=body.color,
-    )
+    if body.scope == "private":
+        goal = CoupleGoal(
+            couple_id=0,  # sentinel; SQLite column has NOT NULL from original schema
+            user_id=current_user.id,
+            scope="private",
+            name=body.name,
+            icon=body.icon,
+            goal_type=body.goal_type,
+            target=body.target,
+            color=body.color,
+        )
+    else:
+        if body.couple_id is None:
+            raise HTTPException(status_code=422, detail="couple_id requerido para metas compartidas")
+        _check_membership(db, body.couple_id, current_user.id)
+        goal = CoupleGoal(
+            couple_id=body.couple_id,
+            user_id=None,
+            scope="shared",
+            name=body.name,
+            icon=body.icon,
+            goal_type=body.goal_type,
+            target=body.target,
+            color=body.color,
+        )
     db.add(goal)
     db.commit()
     db.refresh(goal)
@@ -122,7 +152,11 @@ def update_goal(
     goal = db.query(CoupleGoal).filter(CoupleGoal.id == goal_id).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Meta no encontrada")
-    _check_membership(db, goal.couple_id, current_user.id)
+    if goal.scope == "private":
+        if goal.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No tienes acceso a esta meta")
+    else:
+        _check_membership(db, goal.couple_id, current_user.id)
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(goal, field, value)
     db.commit()
@@ -139,7 +173,11 @@ def delete_goal(
     goal = db.query(CoupleGoal).filter(CoupleGoal.id == goal_id).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Meta no encontrada")
-    _check_membership(db, goal.couple_id, current_user.id)
+    if goal.scope == "private":
+        if goal.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No tienes acceso a esta meta")
+    else:
+        _check_membership(db, goal.couple_id, current_user.id)
     db.query(GoalDeposit).filter(GoalDeposit.goal_id == goal_id).delete()
     db.delete(goal)
     db.commit()
@@ -157,7 +195,11 @@ def add_deposit(
     goal = db.query(CoupleGoal).filter(CoupleGoal.id == goal_id).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Meta no encontrada")
-    _check_membership(db, goal.couple_id, current_user.id)
+    if goal.scope == "private":
+        if goal.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No tienes acceso a esta meta")
+    else:
+        _check_membership(db, goal.couple_id, current_user.id)
     deposit = GoalDeposit(
         goal_id=goal_id,
         user_id=current_user.id,
@@ -180,7 +222,11 @@ def delete_deposit(
     goal = db.query(CoupleGoal).filter(CoupleGoal.id == goal_id).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Meta no encontrada")
-    _check_membership(db, goal.couple_id, current_user.id)
+    if goal.scope == "private":
+        if goal.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No tienes acceso a esta meta")
+    else:
+        _check_membership(db, goal.couple_id, current_user.id)
     deposit = db.query(GoalDeposit).filter(
         GoalDeposit.id == deposit_id,
         GoalDeposit.goal_id == goal_id,

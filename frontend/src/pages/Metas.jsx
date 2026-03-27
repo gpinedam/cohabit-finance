@@ -27,7 +27,7 @@ const colorGradient = (key) =>
   GOAL_COLORS.find(c => c.key === key)?.gradient ?? 'from-violet-600 to-indigo-600'
 
 /* ── Goal form sheet ───────────────────────────────────────────────── */
-function GoalSheet({ coupleId, existing, onClose, onSaved }) {
+function GoalSheet({ coupleId, scope = 'shared', existing, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: existing?.name ?? '',
     icon: existing?.icon ?? '',
@@ -49,7 +49,7 @@ function GoalSheet({ coupleId, existing, onClose, onSaved }) {
       if (existing) {
         result = await updateGoal(existing.id, { name: form.name, icon: form.icon || null, goal_type: form.goal_type, target: t, color: form.color })
       } else {
-        result = await createGoal({ couple_id: coupleId, name: form.name, icon: form.icon || null, goal_type: form.goal_type, target: t, color: form.color })
+      result = await createGoal({ couple_id: scope === 'shared' ? coupleId : null, user_id: null, scope, name: form.name, icon: form.icon || null, goal_type: form.goal_type, target: t, color: form.color })
       }
       onSaved(result.data)
     } catch {
@@ -335,7 +335,7 @@ function GoalCard({ goal, onDeposit, onEdit, onDelete, onDeleteDeposit }) {
 
 /* ── Page ──────────────────────────────────────────────────────────── */
 export default function Metas() {
-  const { coupleId } = useAuth()
+  const { coupleId, mode } = useAuth()
   const [goals, setGoals]         = useState([])
   const [loading, setLoading]     = useState(true)
   const [showForm, setShowForm]   = useState(false)
@@ -343,15 +343,15 @@ export default function Metas() {
   const [depositGoal, setDepositGoal] = useState(null)
 
   const load = async () => {
-    if (!coupleId) return
+    setLoading(true)
     try {
-      const r = await listGoals(coupleId)
+      const r = await listGoals(coupleId, mode)
       setGoals(r.data)
     } catch {}
     finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [coupleId])
+  useEffect(() => { load() }, [coupleId, mode])
 
   const handleSaved = (updatedGoal) => {
     setGoals(prev => {
@@ -392,7 +392,9 @@ export default function Metas() {
       <div className="px-5 pt-6 pb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Metas</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Ahorros compartidos en pareja</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {mode === 'private' ? 'Mis metas personales' : 'Ahorros compartidos en pareja'}
+          </p>
         </div>
         <button
           onClick={() => { setEditGoal(null); setShowForm(true) }}
@@ -432,7 +434,11 @@ export default function Metas() {
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center">
             <p className="text-4xl mb-3">🎯</p>
             <p className="font-bold text-slate-800 text-base mb-1">Sin metas aún</p>
-            <p className="text-slate-400 text-sm mb-5">Crea vuestra primera meta — vacaciones, fondo de emergencia, lo que sea.</p>
+            <p className="text-slate-400 text-sm mb-5">
+              {mode === 'private'
+                ? 'Crea tu primera meta personal — ahorro, viaje, fondo propio…'
+                : 'Crea vuestra primera meta — vacaciones, fondo de emergencia, lo que sea.'}
+            </p>
             <button
               onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors"
@@ -461,6 +467,7 @@ export default function Metas() {
       {showForm && (
         <GoalSheet
           coupleId={coupleId}
+          scope={mode}
           existing={editGoal}
           onClose={() => { setShowForm(false); setEditGoal(null) }}
           onSaved={handleSaved}

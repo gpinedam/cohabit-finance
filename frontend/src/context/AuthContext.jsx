@@ -7,6 +7,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [mode, setModeState] = useState('shared') // 'shared' | 'private' — always resets to shared on load
+
+  const setMode = useCallback((m) => {
+    setModeState(m)
+    document.documentElement.setAttribute('data-mode', m === 'private' ? 'private' : '')
+  }, [])
 
   const loadUser = useCallback(async () => {
     const token = localStorage.getItem('token')
@@ -30,6 +36,8 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', token)
     if (cId) { localStorage.setItem('coupleId', String(cId)); setCoupleId(cId) }
     setUser(userData)
+    setModeState('shared')
+    document.documentElement.removeAttribute('data-mode')
   }, [])
 
   const logout = useCallback(() => {
@@ -41,10 +49,12 @@ export function AuthProvider({ children }) {
   const lockScreen = useCallback(() => {
     localStorage.removeItem('token')
     setUser(null)
+    setModeState('shared')
+    document.documentElement.removeAttribute('data-mode')
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, coupleId, loading, login, logout, lockScreen, setUser, setCoupleId }}>
+    <AuthContext.Provider value={{ user, coupleId, loading, mode, setMode, login, logout, lockScreen, setUser, setCoupleId }}>
       {children}
     </AuthContext.Provider>
   )

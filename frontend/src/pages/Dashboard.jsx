@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { createSettlement, getBalance, listGoals, listRecurringEntries, listSettlements, payRecurringEntry, skipRecurringEntry } from '../services/api'
+import { createSettlement, getBalance, getPersonalSummary, listGoals, listRecurringEntries, listPrivateExpenses, listSettlements, payRecurringEntry, skipRecurringEntry } from '../services/api'
 
 const MONTH_NAMES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const MONTH_NAMES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -19,8 +19,9 @@ const STATUS_CONFIG = {
 }
 
 export default function Dashboard() {
-  const { coupleId } = useAuth()
+  const { coupleId, user, mode } = useAuth()
   const [data,        setData]        = useState(null)
+  const [personalSummary, setPersonalSummary] = useState(null)
   const [settlements, setSettlements] = useState([])
   const [recurring,   setRecurring]   = useState(null)
   const [goals,       setGoals]       = useState([])
@@ -30,21 +31,33 @@ export default function Dashboard() {
   const [settling,    setSettling]    = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [toast,       setToast]       = useState('')
+  const [privateExpenses, setPrivateExpenses] = useState([])
 
   const load = async () => {
     if (!coupleId) return
     const now = new Date()
     try {
-      const [b, s, r, g] = await Promise.all([
-        getBalance(coupleId),
-        listSettlements(coupleId),
-        listRecurringEntries(coupleId, now.getFullYear(), now.getMonth() + 1),
-        listGoals(coupleId),
-      ])
-      setData(b.data)
-      setSettlements(s.data)
-      setRecurring(r.data)
-      setGoals(g.data)
+      if (mode === 'private') {
+        const [ps, priv, g] = await Promise.all([
+          getPersonalSummary(coupleId, now.getFullYear(), now.getMonth() + 1),
+          listPrivateExpenses(0, 100),
+          listGoals(coupleId, 'private'),
+        ])
+        setPersonalSummary(ps.data)
+        setPrivateExpenses(priv.data)
+        setGoals(g.data)
+      } else {
+        const [b, s, r, g] = await Promise.all([
+          getBalance(coupleId),
+          listSettlements(coupleId),
+          listRecurringEntries(coupleId, now.getFullYear(), now.getMonth() + 1),
+          listGoals(coupleId, 'shared'),
+        ])
+        setData(b.data)
+        setSettlements(s.data)
+        setRecurring(r.data)
+        setGoals(g.data)
+      }
     } catch {
       setError('No se pudo cargar el balance')
     } finally {
@@ -52,7 +65,7 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => { load() }, [coupleId])
+  useEffect(() => { load() }, [coupleId, mode])
 
   const handleSettle = async () => {
     setSettling(true)
@@ -105,6 +118,107 @@ export default function Dashboard() {
       <p className="text-slate-400 text-sm">{error}</p>
     </div>
   )
+
+  /* ── PRIVATE MODE ── */
+  if (mode === 'private') {
+    const ps = personalSummary
+    const income = Number(ps?.income_total ?? user?.income ?? 0)
+    const sharedSpent = Number(ps?.shared_spent ?? 0)
+    const privateSpent = Number(ps?.private_spent ?? 0)
+    const savings = Number(ps?.savings_reserved ?? 0)
+    const emergency = Number(ps?.emergency_reserved ?? 0)
+    const available = income - sharedSpent - privateSpent - savings - emergency
+    const now = new Date()
+    const MONTH_NAMES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+    // Group private expenses by category
+    const byCategory = {}
+    for (const e of privateExpenses) {
+      const d = new Date(e.created_at)
+      if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+        byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.total_amount)
+      }
+    }
+
+    return (
+      <div className="pt-16 pb-24 max-w-lg mx-auto">
+        <div className="px-5 pt-6 pb-4">
+          <h1 className="text-2xl font-bold text-slate-900">Balance personal</h1>
+          <p className="text-xs text-slate-400 mt-0.5">{MONTH_NAMES_FULL[now.getMonth()]} {now.getFullYear()}</p>
+        </div>
+
+        {/* Available amount card */}
+        <div className="mx-4 bg-slate-900 rounded-2xl p-5 mb-4">
+          <p className="text-slate-500 text-[11px] font-semibold uppercase tracking-widest mb-2">Disponible este mes</p>
+          <p className={`text-4xl font-bold tabular-nums ${available >= 0 ? 'text-white' : 'text-rose-400'}`}>{fmt(available)}</p>
+          <p className="text-slate-600 text-xs mt-1.5">Ingreso {fmt(income)}</p>
+        </div>
+
+        {/* Breakdown */}
+        <div className="mx-4 bg-white rounded-2xl border border-slate-100 mb-4 overflow-hidden">
+          {[
+            { label: 'Mi parte gastos compartidos', value: sharedSpent,   sign: '−', color: 'text-slate-700' },
+            { label: 'Gastos privados',              value: privateSpent,  sign: '−', color: 'text-slate-700' },
+            { label: 'Ahorro reservado',             value: savings,       sign: '−', color: 'text-violet-600' },
+            { label: 'Fondo emergencia',             value: emergency,     sign: '−', color: 'text-amber-600'  },
+          ].map(({ label, value, sign, color }) => (
+            <div key={label} className="flex items-center justify-between px-4 py-3 border-b border-slate-50 last:border-0">
+              <span className="text-sm text-slate-500">{label}</span>
+              <span className={`text-sm font-semibold tabular-nums ${color}`}>{sign} {fmt(value)}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Private expenses by category */}
+        {Object.keys(byCategory).length > 0 && (
+          <div className="mx-4 mb-4">
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Gastos privados este mes</p>
+            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              {Object.entries(byCategory).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => (
+                <div key={cat} className="flex items-center justify-between px-4 py-3 border-b border-slate-50 last:border-0">
+                  <span className="text-sm text-slate-700">{cat}</span>
+                  <span className="text-sm font-semibold text-slate-900 tabular-nums">{fmt(amt)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Private goals preview */}
+        {goals.length > 0 && (
+          <div className="mx-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-slate-800 text-base">🎯 Mis metas</p>
+              <Link to="/metas" className="text-xs font-semibold text-brand-600 hover:text-brand-700">Ver todas</Link>
+            </div>
+            <div className="flex flex-col gap-2">
+              {goals.map(goal => {
+                const pct = Math.min(Number(goal.pct), 100)
+                return (
+                  <Link key={goal.id} to="/metas" className="bg-white border border-slate-100 rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.99]">
+                    <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-xl shrink-0">
+                      {goal.icon || '🎯'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{goal.name}</p>
+                        <p className="text-xs font-bold text-slate-500 tabular-nums ml-2">{pct.toFixed(0)}%</p>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 tabular-nums">{fmt(goal.accumulated)} / {fmt(goal.target)}</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (!data) return null
 
   const { debts, since, summary } = data

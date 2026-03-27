@@ -59,6 +59,15 @@ def _run_migrations() -> None:
             "ON recurring_entries (service_id, year, month)"
         ))
         conn.commit()
+        # Private goals support
+        if not _column_exists("couple_goals", "scope"):
+            conn.execute(text("ALTER TABLE couple_goals ADD COLUMN scope VARCHAR(10) NOT NULL DEFAULT 'shared'"))
+            conn.commit()
+            logger.info("Migration: added couple_goals.scope")
+        if not _column_exists("couple_goals", "user_id"):
+            conn.execute(text("ALTER TABLE couple_goals ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE"))
+            conn.commit()
+            logger.info("Migration: added couple_goals.user_id")
         # settlements and recurring tables are created by Base.metadata.create_all via the model imports
 
 

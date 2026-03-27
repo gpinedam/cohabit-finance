@@ -25,7 +25,7 @@ const SPLIT_TYPES = [
   },
 ]
 
-export default function ExpenseForm({ members = [], onSubmit, loading }) {
+export default function ExpenseForm({ members = [], onSubmit, loading, defaultScope = 'shared' }) {
   const amountRef = useRef(null)
   const [amount, setAmount]         = useState('')
   const [category, setCategory]     = useState('')
@@ -34,12 +34,10 @@ export default function ExpenseForm({ members = [], onSubmit, loading }) {
   const [splitType, setSplitType]   = useState('proportional')
   const [customPcts, setCustomPcts] = useState({})
   const [showSplitInfo, setShowSplitInfo] = useState(false)
-  const [scope, setScope]           = useState('shared')
+  const [scope, setScope]           = useState(defaultScope)
 
-  useEffect(() => {
-    const t = setTimeout(() => amountRef.current?.focus(), 120)
-    return () => clearTimeout(t)
-  }, [])
+  // Sync scope when defaultScope prop changes (mode switch)
+  useEffect(() => { setScope(defaultScope) }, [defaultScope])
 
   const handleSubmit = (e) => {
     e.preventDefault()

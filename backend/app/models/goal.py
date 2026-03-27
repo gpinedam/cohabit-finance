@@ -13,13 +13,15 @@ class CoupleGoal(Base):
     __tablename__ = "couple_goals"
 
     id          = Column(Integer, primary_key=True, index=True)
-    couple_id   = Column(Integer, ForeignKey("couples.id", ondelete="CASCADE"), nullable=False, index=True)
+    couple_id   = Column(Integer, ForeignKey("couples.id", ondelete="CASCADE"), nullable=True, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    scope       = Column(String(10), nullable=False, default="shared")  # "shared" | "private"
     name        = Column(String(100), nullable=False)
-    icon        = Column(String(10), nullable=True)   # emoji
-    goal_type   = Column(String(20), nullable=False, default="savings")  # "savings" | "emergency"
+    icon        = Column(String(10), nullable=True)
+    goal_type   = Column(String(20), nullable=False, default="savings")
     target      = Column(Numeric(12, 2), nullable=False)
-    color       = Column(String(30), nullable=True, default="violet")    # tailwind color key
-    is_active   = Column(Integer, nullable=False, default=1)             # 1=active, 0=archived
+    color       = Column(String(30), nullable=True, default="violet")
+    is_active   = Column(Integer, nullable=False, default=1)
     created_at  = Column(DateTime, default=datetime.utcnow)
 
 

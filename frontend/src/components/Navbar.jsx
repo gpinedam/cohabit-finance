@@ -122,23 +122,56 @@ function UserAvatar({ user, size = 'sm' }) {
 }
 
 export default function Navbar() {
-  const { user } = useAuth()
+  const { user, mode, setMode } = useAuth()
   const location = useLocation()
 
   return (
     <>
       {/* Top bar */}
       <header className="fixed top-0 inset-x-0 z-30 bg-white border-b border-slate-200/70">
-        <div className="max-w-lg mx-auto flex items-center justify-between px-5 h-14">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center shrink-0">
+        <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14 gap-3">
+          {/* Logo */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6v-3Z" />
               </svg>
             </div>
             <span className="font-semibold text-slate-900 text-[15px] tracking-tight">Cohabit</span>
           </div>
-          <Link to="/profile" className="active:scale-95 transition-transform">
+
+          {/* Mode switch pill */}
+          <button
+            onClick={() => setMode(mode === 'shared' ? 'private' : 'shared')}
+            aria-label="Cambiar modo"
+            className="relative flex items-center bg-slate-100 rounded-full shrink-0"
+            style={{ width: 160, height: 32, padding: 4 }}
+          >
+            {/* Sliding thumb */}
+            <span
+              className="absolute rounded-full bg-white shadow-sm transition-transform duration-300 ease-[cubic-bezier(.4,0,.2,1)]"
+              style={{
+                width: 76,
+                top: 4,
+                bottom: 4,
+                left: 4,
+                transform: mode === 'private' ? 'translateX(76px)' : 'translateX(0)',
+              }}
+            />
+            <span className={`relative z-10 flex-1 text-center text-[11px] font-semibold tracking-tight transition-colors duration-200 ${
+              mode === 'shared' ? 'text-indigo-600' : 'text-slate-400'
+            }`}>
+              Compartido
+            </span>
+            <span className={`relative z-10 flex-1 text-center text-[11px] font-semibold tracking-tight transition-colors duration-200 ${
+              mode === 'private' ? 'text-rose-500' : 'text-slate-400'
+            }`}>
+              Personal
+            </span>
+          </button>
+
+          {/* Avatar */}
+          <Link to="/profile" className="active:scale-95 transition-transform shrink-0">
             <UserAvatar user={user} size="sm" />
           </Link>
         </div>
