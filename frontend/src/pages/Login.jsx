@@ -48,9 +48,11 @@ export default function Login() {
   const { login } = useAuth()
   const navigate   = useNavigate()
 
-  const [users, setUsers]       = useState([])
-  const [selected, setSelected] = useState(null)
-  const [pinError, setPinError] = useState(false)
+  const [users, setUsers]             = useState([])
+  const [selected, setSelected]       = useState(null)
+  const [pinError, setPinError]       = useState(false)
+  const [pinLoading, setPinLoading]   = useState(false)
+  const [pinSuccess, setPinSuccess]   = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(true)
 
   useEffect(() => {
@@ -72,10 +74,14 @@ export default function Login() {
   }
 
   const handlePinComplete = async (pin) => {
+    setPinLoading(true)
     try {
       const res = await loginWithPinById(selected.id, pin)
-      await afterLogin(res.data.access_token)
+      setPinSuccess(true)
+      // Start afterLogin in background — navigate() inside it will fire once done
+      afterLogin(res.data.access_token)
     } catch {
+      setPinLoading(false)
       setPinError(true)
     }
   }
@@ -131,6 +137,24 @@ export default function Login() {
   /* ── PIN entry screen ───────────────────────────────────────────── */
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
+
+      {/* Success toast */}
+      {pinSuccess && (
+        <div className="fixed inset-x-0 top-6 flex justify-center z-50 px-6">
+          <div className="flex items-center gap-3 bg-emerald-500 text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-emerald-500/30 animate-slide-up">
+            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-semibold text-sm">¡Bienvenido, {selected.name}!</p>
+              <p className="text-emerald-100 text-xs">Cargando tu sesión…</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4">
         <PinAvatar user={selected} index={selectedIndex} />
         <h2 className="text-2xl font-bold text-white">{selected.name}</h2>
@@ -142,6 +166,7 @@ export default function Login() {
           onComplete={handlePinComplete}
           error={pinError}
           onErrorClear={() => setPinError(false)}
+          loading={pinLoading}
         />
         <button
           onClick={() => { setSelected(null); setPinError(false) }}

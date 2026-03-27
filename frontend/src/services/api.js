@@ -74,6 +74,10 @@ export const getHistory = (coupleId) =>
   api.get('/reports/history', { params: { couple_id: coupleId } })
 export const getPersonalSummary = (coupleId, year, month) =>
   api.get('/reports/personal-summary', { params: { couple_id: coupleId, year, month } })
+export const getPersonalTracker = (coupleId) =>
+  api.get('/reports/personal-tracker', { params: { couple_id: coupleId } })
+export const exportPersonalTracker = (coupleId) =>
+  api.get('/reports/personal-tracker/export', { params: { couple_id: coupleId }, responseType: 'blob' })
 export const exportHistory = (coupleId, year = null, month = null) => {
   const params = { couple_id: coupleId }
   if (year) params.year = year
@@ -108,5 +112,13 @@ export const listPrivateExpenses = (skip = 0, limit = 50) =>
   api.get('/expenses/private', { params: { skip, limit } })
 export const createPrivateExpense = (data) =>
   api.post('/expenses/private', data)
+
+// --- Extra income ---
+export const getExtraIncome = (year, month) =>
+  api.get('/users/me/extra-income', { params: { year, month } })
+export const upsertExtraIncome = (data) =>
+  api.put('/users/me/extra-income', data)
+export const deleteExtraIncome = (year, month) =>
+  api.delete(`/users/me/extra-income/${year}/${month}`)
 
 export default api

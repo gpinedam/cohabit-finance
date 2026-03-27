@@ -1,13 +1,15 @@
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.security import get_pin_hash, verify_pin
 from app.dependencies.auth import get_current_user, get_db
 from app.models.couple import CoupleMember
+from app.models.extra_income import ExtraIncome
 from app.models.user import User
+from app.schemas.extra_income import ExtraIncomeRead, ExtraIncomeUpsert
 from app.schemas.user import PinStatus, PinUpdate, UserRead, UserUpdate
 
 def _avatars_dir() -> Path:
@@ -131,3 +133,76 @@ def delete_avatar(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+# ── Extra income (one-off monthly income) ─────────────────────────────────────
+
+@router.get("/me/extra-income", response_model=ExtraIncomeRead | None)
+def get_extra_income(
+    year: int = Query(...),
+    month: int = Query(..., ge=1, le=12),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(ExtraIncome)
+        .filter(
+            ExtraIncome.user_id == current_user.id,
+            ExtraIncome.year == year,
+            ExtraIncome.month == month,
+        )
+        .first()
+    )
+
+
+@router.put("/me/extra-income", response_model=ExtraIncomeRead)
+def upsert_extra_income(
+    body: ExtraIncomeUpsert,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    entry = (
+        db.query(ExtraIncome)
+        .filter(
+            ExtraIncome.user_id == current_user.id,
+            ExtraIncome.year == body.year,
+            ExtraIncome.month == body.month,
+        )
+        .first()
+    )
+    if entry:
+        entry.amount = body.amount
+        entry.note = body.note
+    else:
+        entry = ExtraIncome(
+            user_id=current_user.id,
+            year=body.year,
+            month=body.month,
+            amount=body.amount,
+            note=body.note,
+        )
+        db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.delete("/me/extra-income/{year}/{month}", status_code=204)
+def delete_extra_income(
+    year: int,
+    month: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    entry = (
+        db.query(ExtraIncome)
+        .filter(
+            ExtraIncome.user_id == current_user.id,
+            ExtraIncome.year == year,
+            ExtraIncome.month == month,
+        )
+        .first()
+    )
+    if entry:
+        db.delete(entry)
+        db.commit()

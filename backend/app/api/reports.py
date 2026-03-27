@@ -13,7 +13,7 @@ from app.dependencies.auth import get_current_user, get_db
 from app.models.expense import Expense
 from app.models.user import User
 from app.services.balance_service import get_balance
-from app.services.report_service import get_history, get_monthly, get_personal_summary, _check_membership
+from app.services.report_service import get_history, get_monthly, get_personal_summary, get_personal_tracker, _check_membership
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -58,6 +58,33 @@ def personal_summary(
     return get_personal_summary(db, couple_id, year, month, current_user.id)
 
 
+@router.get("/personal-tracker")
+def personal_tracker(
+    couple_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_personal_tracker(db, couple_id, current_user.id)
+
+
+@router.get("/personal-tracker/export")
+def personal_tracker_export(
+    couple_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_membership(db, couple_id, current_user.id)
+    tracker = get_personal_tracker(db, couple_id, current_user.id)
+    user = db.query(User).filter(User.id == current_user.id).first()
+    data = _build_tracker_excel(tracker, user.name if user else "Usuario")
+    headers = {"Content-Disposition": f'attachment; filename="cohabit-personal-{current_user.id}.xlsx"'}
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers,
+    )
+
+
 # ── Excel export ─────────────────────────────────────────────────────────────
 
 MONTH_NAMES_ES = [
@@ -77,6 +104,63 @@ _RIGHT         = Alignment(horizontal="right")
 def _col_widths(ws, widths: list[int]) -> None:
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
+
+
+def _build_tracker_excel(tracker: list[dict], user_name: str) -> bytes:
+    """Build an Excel workbook for the personal financial tracker."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Historial financiero"
+
+    headers = [
+        "Mes", "Año",
+        "Ingreso base (S/)", "Ingreso extra (S/)", "Total ingresos (S/)",
+        "Gastos compartidos (S/)", "Gastos personales (S/)",
+        "Ahorro reservado (S/)", "Fondo emergencia (S/)",
+        "Disponible (S/)",
+    ]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.fill = _HEADER_FILL
+        cell.font = _HEADER_FONT
+        cell.alignment = _CENTER
+    ws.row_dimensions[1].height = 22
+    ws.freeze_panes = "A2"
+
+    for row_idx, m in enumerate(reversed(tracker), 2):
+        disponible = float(m["available"])
+        avail_cell_color = "D1FAE5" if disponible >= 0 else "FEE2E2"  # green / red tint
+
+        ws.cell(row=row_idx, column=1, value=MONTH_NAMES_ES[m["month"] - 1])
+        ws.cell(row=row_idx, column=2, value=m["year"])
+        for col, key in [
+            (3, "income_base"), (4, "extra_income"), (5, "income_total"),
+            (6, "shared_spent"), (7, "private_spent"),
+            (8, "savings_reserved"), (9, "emergency_reserved"),
+        ]:
+            cell = ws.cell(row=row_idx, column=col, value=float(m[key]))
+            cell.number_format = '"S/ "#,##0.00'
+            cell.alignment = _RIGHT
+        avail_cell = ws.cell(row=row_idx, column=10, value=disponible)
+        avail_cell.number_format = '"S/ "#,##0.00'
+        avail_cell.alignment = _RIGHT
+        avail_cell.fill = PatternFill("solid", fgColor=avail_cell_color)
+        avail_cell.font = Font(bold=True, size=10)
+
+    widths = [14, 7, 18, 18, 18, 22, 20, 20, 20, 16]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # Add user name + generation date in row below data
+    info_row = len(tracker) + 3
+    ws.cell(row=info_row, column=1, value=f"Usuario: {user_name}").font = Font(italic=True, size=9, color="94A3B8")
+    from datetime import datetime
+    ws.cell(row=info_row, column=3, value=f"Generado: {datetime.utcnow().strftime('%d/%m/%Y')}").font = Font(italic=True, size=9, color="94A3B8")
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.read()
 
 
 def _build_excel(

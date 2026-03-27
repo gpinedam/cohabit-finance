@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫']
 
-export default function PinPad({ onComplete, error, onErrorClear }) {
+export default function PinPad({ onComplete, error, onErrorClear, loading }) {
   const [digits, setDigits] = useState([])
   const [shake, setShake]   = useState(false)
 
@@ -16,6 +16,7 @@ export default function PinPad({ onComplete, error, onErrorClear }) {
   }, [error])
 
   const press = (key) => {
+    if (loading || shake) return
     if (key === '') return
     if (key === '⌫') { setDigits((d) => d.slice(0, -1)); return }
     const next = [...digits, key]
@@ -31,7 +32,11 @@ export default function PinPad({ onComplete, error, onErrorClear }) {
           <div
             key={i}
             className={`rounded-full transition-all duration-150 ${
-              i < digits.length
+              loading
+                ? i < 6
+                  ? 'w-4 h-4 bg-brand-400 animate-pulse'
+                  : 'w-3.5 h-3.5 bg-slate-200'
+                : i < digits.length
                 ? 'w-4 h-4 bg-brand-600 scale-110'
                 : 'w-3.5 h-3.5 bg-slate-200'
             }`}
@@ -45,10 +50,12 @@ export default function PinPad({ onComplete, error, onErrorClear }) {
           <button
             key={idx}
             onClick={() => press(key)}
-            disabled={key === ''}
+            disabled={key === '' || loading}
             className={`h-16 rounded-2xl text-2xl font-semibold transition-all active:scale-90 ${
               key === ''
                 ? 'invisible'
+                : loading
+                ? 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed'
                 : key === '⌫'
                 ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 : 'bg-slate-50 border border-slate-200 text-slate-900 hover:bg-white active:bg-slate-100'

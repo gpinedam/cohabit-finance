@@ -10,6 +10,7 @@ from sqlalchemy import inspect, text
 from app.core.security import get_password_hash, get_pin_hash
 from app.models.couple import Couple, CoupleMember  # noqa: F401 – register with Base
 from app.models.expense import Expense, ExpenseSplit, Payment  # noqa: F401
+from app.models.extra_income import ExtraIncome  # noqa: F401
 from app.models.recurring import RecurringEntry, RecurringService  # noqa: F401
 from app.models.settlement import Settlement  # noqa: F401
 from app.models.user import User  # noqa: F401
