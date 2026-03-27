@@ -13,11 +13,11 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// On 401, clear token and redirect to login
+// On 401, clear token and redirect to login (skip if already on login — wrong PIN is expected 401)
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }

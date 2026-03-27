@@ -33,9 +33,9 @@ export default function PinPad({ onComplete, error, onErrorClear, loading }) {
             key={i}
             className={`rounded-full transition-all duration-150 ${
               loading
-                ? i < 6
-                  ? 'w-4 h-4 bg-brand-400 animate-pulse'
-                  : 'w-3.5 h-3.5 bg-slate-200'
+                ? 'w-4 h-4 bg-brand-400 animate-pulse'
+                : error && i < 6
+                ? 'w-4 h-4 bg-rose-400'
                 : i < digits.length
                 ? 'w-4 h-4 bg-brand-600 scale-110'
                 : 'w-3.5 h-3.5 bg-slate-200'
