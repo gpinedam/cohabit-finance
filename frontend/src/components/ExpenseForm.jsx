@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import CATEGORIES from '../data/expense-categories.json'
 
 // ── Split types: label + explanation shown on (?) ────────────────────────
@@ -34,10 +34,8 @@ export default function ExpenseForm({ members = [], onSubmit, loading, defaultSc
   const [splitType, setSplitType]   = useState('proportional')
   const [customPcts, setCustomPcts] = useState({})
   const [showSplitInfo, setShowSplitInfo] = useState(false)
-  const [scope, setScope]           = useState(defaultScope)
 
-  // Sync scope when defaultScope prop changes (mode switch)
-  useEffect(() => { setScope(defaultScope) }, [defaultScope])
+  const scope = defaultScope
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -58,7 +56,6 @@ export default function ExpenseForm({ members = [], onSubmit, loading, defaultSc
     onSubmit(payload)
     setAmount(''); setCategory(''); setSubcat(''); setDesc('')
     setSplitType('proportional'); setCustomPcts({}); setShowSplitInfo(false)
-    setScope('shared')
     setTimeout(() => amountRef.current?.focus(), 80)
   }
 
@@ -101,32 +98,6 @@ export default function ExpenseForm({ members = [], onSubmit, loading, defaultSc
 
       {/* ── Divider ── */}
       <div className="h-px bg-slate-100" />
-
-      {/* ── Scope toggle ─────────────────────────────────────────── */}
-      <div className="px-4 py-3 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setScope('shared')}
-          className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold border transition-all active:scale-[0.97] ${
-            scope === 'shared'
-              ? 'bg-brand-600 text-white border-brand-600'
-              : 'bg-slate-50 text-slate-500 border-transparent hover:border-slate-200'
-          }`}
-        >
-          👫 Compartido
-        </button>
-        <button
-          type="button"
-          onClick={() => setScope('private')}
-          className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold border transition-all active:scale-[0.97] ${
-            scope === 'private'
-              ? 'bg-violet-600 text-white border-violet-600'
-              : 'bg-slate-50 text-slate-500 border-transparent hover:border-slate-200'
-          }`}
-        >
-          🔒 Personal
-        </button>
-      </div>
 
       {/* ── Category horizontal scroll ───────────────────────────── */}
       <div className="py-5">
