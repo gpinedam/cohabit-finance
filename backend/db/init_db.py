@@ -15,6 +15,7 @@ from app.models.goal import CoupleGoal, GoalDeposit  # noqa: F401
 from app.models.recurring import RecurringEntry, RecurringService  # noqa: F401
 from app.models.settlement import Settlement  # noqa: F401
 from app.models.user import User  # noqa: F401
+from app.models.wishlist import WishlistItem  # noqa: F401 – register with Base
 from db.session import Base, SessionLocal, engine
 
 logger = logging.getLogger(__name__)

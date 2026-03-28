@@ -139,4 +139,20 @@ export const addDeposit = (goalId, data) =>
 export const deleteDeposit = (goalId, depositId) =>
   api.delete(`/goals/${goalId}/deposits/${depositId}`)
 
+// --- Wishlist ---
+export const listWishlistItems = (params = {}) =>
+  api.get('/wishlist/', { params })
+export const createWishlistItem = (data) =>
+  api.post('/wishlist/', data)
+export const updateWishlistItem = (id, data) =>
+  api.patch(`/wishlist/${id}`, data)
+export const deleteWishlistItem = (id) =>
+  api.delete(`/wishlist/${id}`)
+export const uploadWishlistPhoto = (id, formData) =>
+  api.post(`/wishlist/${id}/photo`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+export const deleteWishlistPhoto = (id) =>
+  api.delete(`/wishlist/${id}/photo`)
+
 export default api

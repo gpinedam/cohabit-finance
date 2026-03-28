@@ -7,6 +7,7 @@ import History from './pages/History'
 import Home from './pages/Home'
 import Personal from './pages/Personal'
 import Metas from './pages/Metas'
+import Wishlist from './pages/Wishlist'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
 import Recurring from './pages/Recurring'
@@ -119,6 +120,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppShell><Metas /></AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wishlist"
+        element={
+          <ProtectedRoute>
+            <AppShell><Wishlist /></AppShell>
           </ProtectedRoute>
         }
       />

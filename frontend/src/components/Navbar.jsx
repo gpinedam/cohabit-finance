@@ -170,6 +170,27 @@ export default function Navbar() {
             </span>
           </button>
 
+          {/* Notes / Wishlist icon */}
+          <Link
+            to="/wishlist"
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-95 shrink-0 ${
+              location.pathname === '/wishlist'
+                ? 'text-brand-600 bg-brand-50'
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+            }`}
+            aria-label="Lista de deseos"
+          >
+            {location.pathname === '/wishlist' ? (
+              <svg className="w-[19px] h-[19px]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+              </svg>
+            ) : (
+              <svg className="w-[19px] h-[19px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+              </svg>
+            )}
+          </Link>
+
           {/* Avatar */}
           <Link to="/profile" className="active:scale-95 transition-transform shrink-0">
             <UserAvatar user={user} size="sm" />
