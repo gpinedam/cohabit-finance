@@ -62,6 +62,7 @@ def _to_read(item: WishlistItem) -> WishlistItemRead:
         stars=item.stars,
         photo_url=f"/wishlist-photos/{item.photo}" if item.photo else None,
         url=item.url,
+        list_type=item.list_type,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
@@ -79,6 +80,7 @@ def _own_or_403(item: WishlistItem | None, user: User) -> WishlistItem:
 
 @router.get("/", response_model=list[WishlistItemRead])
 def list_items(
+    list_type: Literal["want", "have"] | None = None,
     stars: int | None = None,
     min_price: float | None = None,
     max_price: float | None = None,
@@ -88,6 +90,8 @@ def list_items(
 ):
     q = db.query(WishlistItem).filter(WishlistItem.user_id == current_user.id)
 
+    if list_type is not None:
+        q = q.filter(WishlistItem.list_type == list_type)
     if stars is not None:
         q = q.filter(WishlistItem.stars == stars)
     if min_price is not None:

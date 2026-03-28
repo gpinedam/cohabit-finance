@@ -6,17 +6,19 @@ import StarRating from './StarRating'
  * WishlistItemModal — bottom-sheet slide-up for creating or editing a wishlist item.
  *
  * Props:
- *   mode       ('create'|'edit')
- *   item       (object|null)    — pre-filled data for edit mode
- *   onClose    (fn)             — called on cancel or successful save
- *   onSaved    (fn)             — called with the saved/updated item
+ *   mode            ('create'|'edit')
+ *   item            (object|null)    — pre-filled data for edit mode
+ *   defaultListType ('want'|'have')  — which list to create into (ignored in edit mode)
+ *   onClose         (fn)             — called on cancel or successful save
+ *   onSaved         (fn)             — called with the saved/updated item
  */
-export default function WishlistItemModal({ mode = 'create', item = null, onClose, onSaved }) {
+export default function WishlistItemModal({ mode = 'create', item = null, defaultListType = 'want', onClose, onSaved }) {
   const [title, setTitle]           = useState(item?.title ?? '')
   const [description, setDesc]      = useState(item?.description ?? '')
   const [price, setPrice]           = useState(item?.price != null ? String(item.price) : '')
   const [stars, setStars]           = useState(item?.stars ?? 3)
   const [url, setUrl]               = useState(item?.url ?? '')
+  const [listType]                  = useState(item?.list_type ?? defaultListType)
   const [photoPreview, setPhotoPreview] = useState(item?.photo_url ?? null)
   const [pendingFile, setPendingFile]   = useState(null)  // file selected but not yet uploaded
   const [removePhoto, setRemovePhoto]   = useState(false) // mark existing photo for deletion
@@ -72,6 +74,7 @@ export default function WishlistItemModal({ mode = 'create', item = null, onClos
         price: price !== '' ? parseFloat(price) : null,
         stars,
         url: url.trim() || null,
+        list_type: listType,
       }
 
       let saved

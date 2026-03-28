@@ -81,6 +81,10 @@ def _run_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN pin_encrypted VARCHAR(512)"))
             conn.commit()
             logger.info("Migration: added users.pin_encrypted")
+        if not _column_exists("wishlist_items", "list_type"):
+            conn.execute(text("ALTER TABLE wishlist_items ADD COLUMN list_type VARCHAR(10) NOT NULL DEFAULT 'want'"))
+            conn.commit()
+            logger.info("Migration: added wishlist_items.list_type")
         # settlements and recurring tables are created by Base.metadata.create_all via the model imports
 
 

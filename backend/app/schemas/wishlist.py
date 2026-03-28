@@ -10,6 +10,7 @@ class WishlistItemCreate(BaseModel):
     price: float | None = None
     stars: int = Field(default=3, ge=1, le=5)
     url: str | None = None
+    list_type: Literal["want", "have"] = "want"
 
     @field_validator("price")
     @classmethod
@@ -25,6 +26,7 @@ class WishlistItemUpdate(BaseModel):
     price: float | None = None
     stars: int | None = Field(default=None, ge=1, le=5)
     url: str | None = None
+    list_type: Literal["want", "have"] | None = None
 
     @field_validator("price")
     @classmethod
@@ -43,6 +45,7 @@ class WishlistItemRead(BaseModel):
     stars: int
     photo_url: str | None  # computed from filename in router
     url: str | None
+    list_type: str
     created_at: datetime
     updated_at: datetime
 
