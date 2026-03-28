@@ -153,11 +153,11 @@ export default function WishlistItemModal({ mode = 'create', item = null, onClos
             <div>
               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Foto</p>
               {photoPreview ? (
-                <div className="relative w-full h-44 rounded-2xl overflow-hidden bg-slate-100 group">
+                <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 group">
                   <img
                     src={photoPreview}
                     alt="Vista previa"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   <button
                     type="button"

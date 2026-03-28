@@ -1,9 +1,11 @@
+import io
 import os
 import uuid
 from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from PIL import Image, ImageOps
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth import get_current_user
@@ -16,6 +18,22 @@ router = APIRouter(prefix="/wishlist", tags=["wishlist"])
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_DIMENSION = 1200               # px — longest side after resize
+
+
+def _process_and_save_image(raw_bytes: bytes, dest: Path) -> None:
+    """Open an image, auto-rotate via EXIF, resize to MAX_DIMENSION on the
+    longest side (preserving aspect ratio), convert to RGB JPEG, and save."""
+    img: Image.Image = Image.open(io.BytesIO(raw_bytes))
+    # Auto-rotate using EXIF orientation (handles phone photos correctly)
+    img = ImageOps.exif_transpose(img)
+    # Convert palette / RGBA → RGB so JPEG save works in all cases
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+    # Resize only if larger than MAX_DIMENSION
+    if max(img.size) > MAX_DIMENSION:
+        img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.LANCZOS)
+    img.save(dest, format="JPEG", quality=85, optimize=True, progressive=True)
 
 
 def _get_wishlist_dir() -> Path:
@@ -173,10 +191,11 @@ async def upload_photo(
         old_path = _get_wishlist_dir() / item.photo
         old_path.unlink(missing_ok=True)
 
-    ext = Path(file.filename).suffix.lower() if file.filename else ".jpg"
-    filename = f"{uuid.uuid4().hex}{ext}"
+    # Resize and convert to JPEG for consistent storage and fast loading
+    filename = f"{uuid.uuid4().hex}.jpg"
     dest = _get_wishlist_dir() / filename
-    dest.write_bytes(contents)
+    _process_and_save_image(contents, dest)
+    
 
     item.photo = filename
     db.commit()
