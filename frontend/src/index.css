@@ -27,6 +27,19 @@
   --brand-800: 159 18  57;
 }
 
+/* Wishlist — morado/violeta global, sobreescribe cualquier modo */
+[data-mode="wishlist"] {
+  --brand-50:  245 243 255;
+  --brand-100: 237 233 254;
+  --brand-200: 221 214 254;
+  --brand-300: 196 181 253;
+  --brand-400: 167 139 250;
+  --brand-500: 139 92  246;
+  --brand-600: 124 58  237;
+  --brand-700: 109 40  217;
+  --brand-800: 91  33  182;
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;

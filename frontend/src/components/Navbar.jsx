@@ -1,5 +1,6 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useEffect } from 'react'
 
 function IcHome({ a }) {
   return a ? (
@@ -124,6 +125,20 @@ function UserAvatar({ user, size = 'sm' }) {
 export default function Navbar() {
   const { user, mode, setMode } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+  const isWishlist = location.pathname === '/wishlist'
+
+  // Única fuente de verdad para data-mode en <html>
+  useEffect(() => {
+    const value = isWishlist ? 'wishlist' : mode === 'private' ? 'private' : ''
+    document.documentElement.setAttribute('data-mode', value)
+  }, [isWishlist, mode])
+
+  const handleModeSelect = (selected) => {
+    setMode(selected)
+    // Si estamos en wishlist, navegar a inicio para que el cambio de modo sea visible
+    if (isWishlist) navigate('/')
+  }
 
   return (
     <>
@@ -140,35 +155,43 @@ export default function Navbar() {
             <span className="font-semibold text-slate-900 text-[15px] tracking-tight">Cohabit</span>
           </div>
 
-          {/* Mode switch pill */}
-          <button
-            onClick={() => setMode(mode === 'shared' ? 'private' : 'shared')}
+          {/* Mode switch pill — cada mitad es clickeable independientemente */}
+          <div
+            role="group"
             aria-label="Cambiar modo"
             className="relative flex items-center bg-slate-100 rounded-full shrink-0"
             style={{ width: 160, height: 32, padding: 4 }}
           >
             {/* Sliding thumb */}
-            <span
-              className="absolute rounded-full bg-white shadow-sm transition-transform duration-300 ease-[cubic-bezier(.4,0,.2,1)]"
-              style={{
-                width: 76,
-                top: 4,
-                bottom: 4,
-                left: 4,
-                transform: mode === 'private' ? 'translateX(76px)' : 'translateX(0)',
-              }}
-            />
-            <span className={`relative z-10 flex-1 text-center text-[11px] font-semibold tracking-tight transition-colors duration-200 ${
-              mode === 'shared' ? 'text-indigo-600' : 'text-slate-400'
-            }`}>
+            {!isWishlist && (
+              <span
+                className="absolute rounded-full bg-white shadow-sm transition-transform duration-300 ease-[cubic-bezier(.4,0,.2,1)]"
+                style={{
+                  width: 76,
+                  top: 4,
+                  bottom: 4,
+                  left: 4,
+                  transform: mode === 'private' ? 'translateX(76px)' : 'translateX(0)',
+                }}
+              />
+            )}
+            <button
+              onClick={() => handleModeSelect('shared')}
+              className={`relative z-10 flex-1 text-center text-[11px] font-semibold tracking-tight transition-colors duration-200 py-1 rounded-full ${
+                !isWishlist && mode === 'shared' ? 'text-indigo-600' : 'text-slate-400'
+              }`}
+            >
               Compartido
-            </span>
-            <span className={`relative z-10 flex-1 text-center text-[11px] font-semibold tracking-tight transition-colors duration-200 ${
-              mode === 'private' ? 'text-rose-500' : 'text-slate-400'
-            }`}>
+            </button>
+            <button
+              onClick={() => handleModeSelect('private')}
+              className={`relative z-10 flex-1 text-center text-[11px] font-semibold tracking-tight transition-colors duration-200 py-1 rounded-full ${
+                !isWishlist && mode === 'private' ? 'text-rose-500' : 'text-slate-400'
+              }`}
+            >
               Personal
-            </span>
-          </button>
+            </button>
+          </div>
 
           {/* Notes / Wishlist icon */}
           <Link

@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
 
   const setMode = useCallback((m) => {
     setModeState(m)
-    document.documentElement.setAttribute('data-mode', m === 'private' ? 'private' : '')
+    // data-mode en <html> es manejado exclusivamente por Navbar para evitar conflictos
   }, [])
 
   const loadUser = useCallback(async () => {
@@ -37,7 +37,6 @@ export function AuthProvider({ children }) {
     if (cId) { localStorage.setItem('coupleId', String(cId)); setCoupleId(cId) }
     setUser(userData)
     setModeState('shared')
-    document.documentElement.removeAttribute('data-mode')
   }, [])
 
   const logout = useCallback(() => {
@@ -50,7 +49,6 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token')
     setUser(null)
     setModeState('shared')
-    document.documentElement.removeAttribute('data-mode')
   }, [])
 
   return (

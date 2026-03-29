@@ -273,6 +273,8 @@ export default function Wishlist() {
   }
   const tab = tabConfig[activeTab]
 
+  // El color morado se aplica globalmente vía data-mode="wishlist" en <html>
+  // (gestionado por Navbar), no se necesita clase local.
   return (
     <div className="pt-16 pb-28 max-w-lg mx-auto">
 
