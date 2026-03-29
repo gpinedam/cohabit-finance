@@ -27,17 +27,17 @@
   --brand-800: 159 18  57;
 }
 
-/* Wishlist — morado/violeta global, sobreescribe cualquier modo */
+/* Wishlist — siempre verde, independiente del modo activo */
 [data-mode="wishlist"] {
-  --brand-50:  245 243 255;
-  --brand-100: 237 233 254;
-  --brand-200: 221 214 254;
-  --brand-300: 196 181 253;
-  --brand-400: 167 139 250;
-  --brand-500: 139 92  246;
-  --brand-600: 124 58  237;
-  --brand-700: 109 40  217;
-  --brand-800: 91  33  182;
+  --brand-50:  240 253 244;
+  --brand-100: 220 252 231;
+  --brand-200: 187 247 208;
+  --brand-300: 134 239 172;
+  --brand-400: 74  222 128;
+  --brand-500: 34  197 94;
+  --brand-600: 22  163 74;
+  --brand-700: 21  128 61;
+  --brand-800: 22  101 52;
 }
 
 @layer base {
