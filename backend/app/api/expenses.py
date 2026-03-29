@@ -10,7 +10,9 @@ from app.services.expense_service import (
     delete_expense,
     get_expense,
     get_expenses,
+    get_private_expense_summary,
     get_private_expenses,
+    get_private_expenses_by_month,
     update_expense,
 )
 
@@ -26,10 +28,30 @@ def create(
     return create_expense(db, body, current_user.id)
 
 
+@router.get("/private/summary")
+def private_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns [{year, month, count, total}] — one row per month with private expenses."""
+    return get_private_expense_summary(db, current_user.id)
+
+
+@router.get("/private/month")
+def private_month(
+    year: int  = Query(..., ge=2000, le=2100),
+    month: int = Query(..., ge=1,    le=12),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns {expenses, by_category} for the given month."""
+    return get_private_expenses_by_month(db, current_user.id, year, month)
+
+
 @router.get("/private", response_model=list[ExpenseRead])
 def list_private(
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=2000),
+    limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

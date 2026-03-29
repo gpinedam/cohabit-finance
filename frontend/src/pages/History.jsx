@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { deleteExpense, exportHistory, getHistory, getMonthly, listPrivateExpenses, updateExpense } from '../services/api'
+import { deleteExpense, exportHistory, getHistory, getMonthly, getPrivateExpenseSummary, getPrivateExpensesByMonth, listPrivateExpenses, updateExpense } from '../services/api'
 import CATEGORIES_DATA from '../data/expense-categories.json'
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -141,26 +141,12 @@ export default function History() {
   const [filterMonth,  setFilterMonth]  = useState(null)
   const [editingExp,   setEditingExp]   = useState(null)
   const [confirmDel,   setConfirmDel]   = useState(null)
-  const [privateAll,   setPrivateAll]   = useState([])
 
   /* ── data fetching ─────────────────────────────────────────────── */
   const loadHistory = () => {
     if (mode === 'private') {
-      return listPrivateExpenses(0, 1000)
-        .then(r => {
-          setPrivateAll(r.data)
-          // Build month summaries
-          const byKey = {}
-          for (const e of r.data) {
-            const d = new Date(e.created_at)
-            const key = `${d.getFullYear()}-${d.getMonth()+1}`
-            if (!byKey[key]) byKey[key] = { year: d.getFullYear(), month: d.getMonth()+1, count: 0, total: 0 }
-            byKey[key].count++
-            byKey[key].total += Number(e.total_amount)
-          }
-          const sorted = Object.values(byKey).sort((a,b) => b.year - a.year || b.month - a.month)
-          setMonths(sorted)
-        })
+      return getPrivateExpenseSummary()
+        .then(r => setMonths(r.data))
         .catch(() => {})
     }
     return getHistory(coupleId).then(r => setMonths(r.data)).catch(() => {})
@@ -177,41 +163,30 @@ export default function History() {
     if (expanded === key) { setExpanded(null); return }
     setExpanded(key)
     if (!monthData[key]) {
-      if (mode === 'private') {
-        const expenses = privateAll.filter(e => {
-          const d = new Date(e.created_at)
-          return d.getFullYear() === year && d.getMonth()+1 === month
-        })
-        const by_category = {}
-        for (const e of expenses) {
-          by_category[e.category] = (by_category[e.category] || 0) + Number(e.total_amount)
-        }
-        setMonthData(d => ({ ...d, [key]: { expenses, by_category } }))
-      } else {
-        setLoadingMonth(key)
-        try {
+      setLoadingMonth(key)
+      try {
+        if (mode === 'private') {
+          const r = await getPrivateExpensesByMonth(year, month)
+          setMonthData(d => ({ ...d, [key]: r.data }))
+        } else {
           const r = await getMonthly(coupleId, year, month)
           setMonthData(d => ({ ...d, [key]: r.data }))
-        } finally { setLoadingMonth(null) }
-      }
+        }
+      } finally { setLoadingMonth(null) }
     }
   }
 
   const refreshMonth = async (year, month) => {
     if (mode === 'private') {
-      const r = await listPrivateExpenses(0, 1000)
-      setPrivateAll(r.data)
-      const expenses = r.data.filter(e => {
-        const d = new Date(e.created_at)
-        return d.getFullYear() === year && d.getMonth()+1 === month
-      })
-      const by_category = {}
-      for (const e of expenses) {
-        by_category[e.category] = (by_category[e.category] || 0) + Number(e.total_amount)
-      }
       const key = `${year}-${month}`
-      setMonthData(d => ({ ...d, [key]: { expenses, by_category } }))
-      loadHistory()
+      try {
+        const [detail, summary] = await Promise.all([
+          getPrivateExpensesByMonth(year, month),
+          getPrivateExpenseSummary(),
+        ])
+        setMonthData(d => ({ ...d, [key]: detail.data }))
+        setMonths(summary.data)
+      } catch {}
       return
     }
     const key = `${year}-${month}`

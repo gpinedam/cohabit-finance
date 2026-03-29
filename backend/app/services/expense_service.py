@@ -5,6 +5,7 @@ No FastAPI dependencies; receives a SQLAlchemy Session directly.
 from decimal import ROUND_DOWN, Decimal
 
 from fastapi import HTTPException, status
+from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
 
 from app.models.couple import CoupleMember
@@ -238,6 +239,50 @@ def get_private_expenses(
         .all()
     )
     return [_build_expense_read(e, db) for e in expenses]
+
+
+def get_private_expense_summary(db: Session, current_user_id: int) -> list[dict]:
+    """Returns one row per month the user has private expenses, ordered newest first."""
+    rows = (
+        db.query(
+            extract("year",  Expense.created_at).label("year"),
+            extract("month", Expense.created_at).label("month"),
+            func.count(Expense.id).label("count"),
+            func.sum(Expense.total_amount).label("total"),
+        )
+        .filter(Expense.paid_by == current_user_id, Expense.scope == "private")
+        .group_by("year", "month")
+        .order_by(func.max(Expense.created_at).desc())
+        .all()
+    )
+    return [
+        {"year": int(r.year), "month": int(r.month), "count": r.count, "total": float(r.total)}
+        for r in rows
+    ]
+
+
+def get_private_expenses_by_month(
+    db: Session, current_user_id: int, year: int, month: int
+) -> dict:
+    """Returns expenses + by_category breakdown for a specific month."""
+    expenses = (
+        db.query(Expense)
+        .filter(
+            Expense.paid_by == current_user_id,
+            Expense.scope == "private",
+            extract("year",  Expense.created_at) == year,
+            extract("month", Expense.created_at) == month,
+        )
+        .order_by(Expense.created_at.desc())
+        .all()
+    )
+    by_category: dict[str, float] = {}
+    for e in expenses:
+        by_category[e.category] = by_category.get(e.category, 0) + float(e.total_amount)
+    return {
+        "expenses": [_build_expense_read(e, db) for e in expenses],
+        "by_category": by_category,
+    }
 
 
 def create_private_expense(

@@ -114,6 +114,10 @@ export const skipRecurringEntry = (id) =>
 // --- Private expenses ---
 export const listPrivateExpenses = (skip = 0, limit = 50) =>
   api.get('/expenses/private', { params: { skip, limit } })
+export const getPrivateExpenseSummary = () =>
+  api.get('/expenses/private/summary')
+export const getPrivateExpensesByMonth = (year, month) =>
+  api.get('/expenses/private/month', { params: { year, month } })
 export const createPrivateExpense = (data) =>
   api.post('/expenses/private', data)
 
