@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import ExpenseForm from '../components/ExpenseForm'
 import { useAuth } from '../context/AuthContext'
-import { createExpense, deleteExpense, listExpenses, listPrivateExpenses } from '../services/api'
+import { createExpense, createPrivateExpense, deleteExpense, listExpenses, listPrivateExpenses } from '../services/api'
 import api from '../services/api'
 
 const CATEGORY_EMOJI = {
@@ -80,7 +80,11 @@ export default function Home() {
     if (!resolvedCouple) return
     setLoading(true)
     try {
-      await createExpense({ ...payload, couple_id: resolvedCouple })
+      if (payload.scope === 'private') {
+        await createPrivateExpense(payload)
+      } else {
+        await createExpense({ ...payload, couple_id: resolvedCouple })
+      }
       setToast('ok')
       setTimeout(() => setToast(''), 2200)
       const [expenses, privExpenses, monthly] = await Promise.all([
