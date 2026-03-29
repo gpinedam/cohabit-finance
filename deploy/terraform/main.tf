@@ -6,6 +6,11 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.100"
     }
+    # null provider lets us run local commands (build + deploy) after provisioning
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
   }
 
   # Remote state (optional) — uncomment and fill in to use Azure Blob backend
@@ -105,5 +110,122 @@ resource "azurerm_linux_web_app" "main" {
   lifecycle {
     # Prevent accidental deletion of the app in production
     prevent_destroy = false
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Post-provisioning deploy
+#
+# Runs automatically after the App Service is ready.
+# Steps: build frontend → zip backend → sync .env → az webapp deploy
+#
+# Why null_resource + local-exec?
+#   Terraform manages infrastructure state, not application code.
+#   null_resource is the bridge: run a local shell command as part of
+#   terraform apply, after cloud resources exist.
+#
+# To force a re-deploy without infra changes:
+#   terraform taint null_resource.deploy_app && terraform apply
+# ---------------------------------------------------------------------------
+resource "null_resource" "deploy_app" {
+  depends_on = [azurerm_linux_web_app.main]
+
+  triggers = {
+    app_name       = azurerm_linux_web_app.main.name
+    resource_group = azurerm_resource_group.main.name
+  }
+
+  provisioner "local-exec" {
+    # path.module = absolute path of deploy/terraform/
+    # ../../      = project root (where frontend/ and backend/ live)
+    working_dir = "${path.module}/../.."
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      set -euo pipefail
+
+      ROOT="$(pwd)"
+      FRONTEND_DIR="$ROOT/frontend"
+      BACKEND_DIR="$ROOT/backend"
+      ZIP_PATH="/tmp/cohabit-terraform-deploy.zip"
+
+      # ── [1/4] Build React frontend ──────────────────────────────────────
+      echo "📦 [1/4] Building React frontend..."
+      cd "$FRONTEND_DIR"
+      npm ci --silent
+      npm run build
+      echo "   Done → backend/frontend/dist/"
+      echo ""
+
+      # ── [2/4] Create deployment zip ─────────────────────────────────────
+      echo "🗜  [2/4] Creating deployment zip..."
+      cd "$BACKEND_DIR"
+      [[ -f "$ZIP_PATH" ]] && rm "$ZIP_PATH"
+      zip -r "$ZIP_PATH" . \
+        --exclude "*.pyc" \
+        --exclude "*/__pycache__/*" \
+        --exclude "*/.venv/*" \
+        --exclude "*/venv/*" \
+        --exclude "*/data/*" \
+        --exclude "*/.env" \
+        --exclude "*/node_modules/*" \
+        --exclude "*/.DS_Store" \
+        -q
+      echo "   Package: $ZIP_PATH ($(du -sh $ZIP_PATH | cut -f1))"
+      echo ""
+
+      # ── [3/4] Sync .env → Azure App Settings ────────────────────────────
+      # DATABASE_URL is intentionally skipped — on Azure, main.py resolves
+      # the DB path via COHABIT_DATA_DIR → /home/data/app.db automatically.
+      echo "⚙️  [3/4] Syncing .env to Azure App Settings..."
+      ENV_FILE="$ROOT/.env"
+      [[ ! -f "$ENV_FILE" ]] && ENV_FILE="$BACKEND_DIR/.env"
+
+      if [[ -f "$ENV_FILE" ]]; then
+        SETTINGS_ARGS=()
+        while IFS= read -r line; do
+          [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+          [[ "$line" =~ ^[[:space:]]*# ]] && continue
+          KEY="$${line%%=*}"
+          [[ "$$KEY" == "DATABASE_URL" ]] && continue
+          SETTINGS_ARGS+=("$$line")
+        done < "$ENV_FILE"
+
+        if [[ $${#SETTINGS_ARGS[@]} -gt 0 ]]; then
+          az webapp config appsettings set \
+            --name "${azurerm_linux_web_app.main.name}" \
+            --resource-group "${azurerm_resource_group.main.name}" \
+            --settings "$${SETTINGS_ARGS[@]}" \
+            --output none
+          echo "   ✅ $${#SETTINGS_ARGS[@]} variables sincronizadas"
+          for s in "$${SETTINGS_ARGS[@]}"; do
+            echo "   · $${s%%=*}"
+          done
+        fi
+      else
+        echo "   ⚠️  No se encontró .env — saltando sync"
+        echo "   Asegúrate de tener SECRET_KEY configurado en terraform.tfvars."
+      fi
+      echo ""
+
+      # ── [4/4] Zip deploy to Azure ────────────────────────────────────────
+      echo "🚀 [4/4] Deploying to Azure App Service '${azurerm_linux_web_app.main.name}'..."
+      az webapp deploy \
+        --name "${azurerm_linux_web_app.main.name}" \
+        --resource-group "${azurerm_resource_group.main.name}" \
+        --src-path "$ZIP_PATH" \
+        --type zip \
+        --async false
+
+      URL="https://$(az webapp show \
+        --name "${azurerm_linux_web_app.main.name}" \
+        --resource-group "${azurerm_resource_group.main.name}" \
+        --query defaultHostName -o tsv)"
+
+      echo ""
+      echo "─────────────────────────────────────────────"
+      echo "✅  Deploy completo!"
+      echo "   URL: $URL"
+      echo "─────────────────────────────────────────────"
+    EOT
   }
 }
