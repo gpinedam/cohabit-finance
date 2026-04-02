@@ -1,0 +1,162 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api',
+})
+
+// Attach JWT token to every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// On 401, clear token and redirect to login (skip if already on login — wrong PIN is expected 401)
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
+      localStorage.removeItem('token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(err)
+  }
+)
+
+// --- Auth ---
+export const loginWithPassword = (email, password) =>
+  api.post('/auth/login', new URLSearchParams({ username: email, password }), {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
+
+export const loginWithPin = (email, pin) =>
+  api.post('/auth/pin-login', { email, pin })
+
+export const loginWithPinById = (user_id, pin) =>
+  api.post('/auth/pin-login-id', { user_id, pin })
+
+export const listUsers = () =>
+  api.get('/auth/users')
+
+// --- Users ---
+export const getMe = () => api.get('/users/me')
+export const updateMe = (data) => api.put('/users/me', data)
+export const getPinStatus = () => api.get('/users/me/pin-status')
+export const setPin = (pin) => api.put('/users/me/pin', { pin })
+export const deletePin = () => api.delete('/users/me/pin')
+export const getSecurityQuestionStatus = () => api.get('/users/me/security-question-status')
+export const setSecurityQuestion = (question, answer) => api.put('/users/me/security-question', { question, answer })
+export const getSecurityQuestion = (userId) => api.get(`/auth/security-question/${userId}`)
+export const answerSecurityQuestion = (userId, answer) => api.post('/auth/security-answer', { user_id: userId, answer })
+
+export const uploadAvatar = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/users/me/avatar', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const deleteAvatar = () => api.delete('/users/me/avatar')
+
+// --- Expenses ---
+export const createExpense = (data) => api.post('/expenses/', data)
+export const listExpenses = (coupleId, skip = 0, limit = 50) =>
+  api.get('/expenses/', { params: { couple_id: coupleId, skip, limit } })
+export const getExpense = (id) => api.get(`/expenses/${id}`)
+export const updateExpense = (id, data) => api.patch(`/expenses/${id}`, data)
+export const deleteExpense = (id) => api.delete(`/expenses/${id}`)
+
+// --- Reports ---
+export const getBalance = (coupleId) =>
+  api.get('/reports/balance', { params: { couple_id: coupleId } })
+export const getMonthly = (coupleId, year, month) =>
+  api.get('/reports/monthly', { params: { couple_id: coupleId, year, month } })
+export const getHistory = (coupleId) =>
+  api.get('/reports/history', { params: { couple_id: coupleId } })
+export const getPersonalSummary = (coupleId, year, month) =>
+  api.get('/reports/personal-summary', { params: { couple_id: coupleId, year, month } })
+export const getPersonalTracker = (coupleId) =>
+  api.get('/reports/personal-tracker', { params: { couple_id: coupleId } })
+export const exportPersonalTracker = (coupleId) =>
+  api.get('/reports/personal-tracker/export', { params: { couple_id: coupleId }, responseType: 'blob' })
+export const exportHistory = (coupleId, year = null, month = null) => {
+  const params = { couple_id: coupleId }
+  if (year) params.year = year
+  if (month) params.month = month
+  return api.get('/reports/export', { params, responseType: 'blob' })
+}
+
+// --- Settlements ---
+export const createSettlement = (coupleId, note = null) =>
+  api.post('/settlements/', { couple_id: coupleId, note })
+export const listSettlements = (coupleId) =>
+  api.get('/settlements/', { params: { couple_id: coupleId } })
+
+// --- Recurring services ---
+export const listRecurringServices = (coupleId) =>
+  api.get('/recurring/services', { params: { couple_id: coupleId } })
+export const createRecurringService = (data) =>
+  api.post('/recurring/services', data)
+export const updateRecurringService = (id, data) =>
+  api.put(`/recurring/services/${id}`, data)
+export const deleteRecurringService = (id) =>
+  api.delete(`/recurring/services/${id}`)
+export const listRecurringEntries = (coupleId, year, month) =>
+  api.get('/recurring/entries', { params: { couple_id: coupleId, year, month } })
+export const payRecurringEntry = (id, data) =>
+  api.post(`/recurring/entries/${id}/pay`, data)
+export const skipRecurringEntry = (id) =>
+  api.post(`/recurring/entries/${id}/skip`)
+
+// --- Private expenses ---
+export const listPrivateExpenses = (skip = 0, limit = 50) =>
+  api.get('/expenses/private', { params: { skip, limit } })
+export const getPrivateExpenseSummary = () =>
+  api.get('/expenses/private/summary')
+export const getPrivateExpensesByMonth = (year, month) =>
+  api.get('/expenses/private/month', { params: { year, month } })
+export const createPrivateExpense = (data) =>
+  api.post('/expenses/private', data)
+
+// --- Extra income ---
+export const getExtraIncome = (year, month) =>
+  api.get('/users/me/extra-income', { params: { year, month } })
+export const upsertExtraIncome = (data) =>
+  api.put('/users/me/extra-income', data)
+export const deleteExtraIncome = (year, month) =>
+  api.delete(`/users/me/extra-income/${year}/${month}`)
+
+// --- Shared goals ---
+export const listGoals = (coupleId, scope = 'shared', includeArchived = false) =>
+  api.get('/goals/', { params: { couple_id: coupleId, scope, include_archived: includeArchived } })
+export const createGoal = (data) =>
+  api.post('/goals/', data)
+export const updateGoal = (id, data) =>
+  api.patch(`/goals/${id}`, data)
+export const deleteGoal = (id) =>
+  api.delete(`/goals/${id}`)
+export const addDeposit = (goalId, data) =>
+  api.post(`/goals/${goalId}/deposits`, data)
+export const deleteDeposit = (goalId, depositId) =>
+  api.delete(`/goals/${goalId}/deposits/${depositId}`)
+
+// --- Wishlist ---
+export const listWishlistItems = (params = {}) =>
+  api.get('/wishlist/', { params })
+export const createWishlistItem = (data) =>
+  api.post('/wishlist/', data)
+export const updateWishlistItem = (id, data) =>
+  api.patch(`/wishlist/${id}`, data)
+export const deleteWishlistItem = (id) =>
+  api.delete(`/wishlist/${id}`)
+export const uploadWishlistPhoto = (id, formData) =>
+  api.post(`/wishlist/${id}/photo`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+export const deleteWishlistPhoto = (id) =>
+  api.delete(`/wishlist/${id}/photo`)
+
+export default api

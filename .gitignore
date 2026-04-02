@@ -1,2 +1,22 @@
 .env
-.venv
+backend/.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+node_modules/
+frontend/node_modules/
+backend/frontend/dist/
+# Data directory: SQLite DB + avatars — persisted on server, not in git
+backend/data/
+data/app.db
+*.db
+*.sqlite
+.DS_Store
+*.log
+.pytest_cache/
+.ruff_cache/

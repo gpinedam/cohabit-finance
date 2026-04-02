@@ -1,0 +1,51 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it.
+#
+# For sensitive values (secret_key) prefer environment variables:
+#   export TF_VAR_secret_key="your-secret-key-here"
+
+# ------------------------------------------------------------------
+# Azure Subscription
+# ------------------------------------------------------------------
+# Find with: az account show --query id -o tsv
+subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# ------------------------------------------------------------------
+# Resource Group
+# ------------------------------------------------------------------
+resource_group_name = "cohabit-finance-rg"
+
+# Azure region — az account list-locations -o table
+location = "eastus"
+
+# ------------------------------------------------------------------
+# App Service
+# ------------------------------------------------------------------
+# Must be globally unique → becomes <app_name>.azurewebsites.net
+app_name = "cohabit-finance"
+
+# SKU options: F1 (free), B1 (basic), P1v2/P1v3 (production)
+# F1 has no always_on and limited bandwidth.
+sku_name = "B1"
+
+# ------------------------------------------------------------------
+# Application Secrets
+# RECOMMENDED: set via environment variable instead:
+#   export TF_VAR_secret_key="your-secret-key"
+# ------------------------------------------------------------------
+# secret_key = "change-me-use-env-var-instead"
+
+# ------------------------------------------------------------------
+# Environment tag
+# ------------------------------------------------------------------
+environment = "production"
+
+# ------------------------------------------------------------------
+# Extra App Settings (optional)
+# Useful for Azure Files mount credentials (persistent SQLite storage).
+# ------------------------------------------------------------------
+# extra_app_settings = {
+#   AZURE_FILES_ACCOUNT_NAME = "mystorageaccount"
+#   AZURE_FILES_ACCOUNT_KEY  = "base64key=="
+#   AZURE_FILES_SHARE_NAME   = "cohabit-data"
+# }
